@@ -33,7 +33,7 @@ import autoTable from "jspdf-autotable";
 import { generateReceiptHtml } from "@/lib/receipt-utils";
 
 const Dashboard = () => {
-  const { poles, loading, loadingRepairs, deletePole, repairs, deleteRepair, fetchRepairPhotos } = usePoles();
+  const { poles, loading, loadingRepairs, deletePole, repairs, deleteRepair, fetchRepairDetails } = usePoles();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [selectedPole, setSelectedPole] = useState<Pole | null>(null);
@@ -609,17 +609,17 @@ const Dashboard = () => {
                                 onClick={async () => {
                                   setProcessingReceipt(true);
                                   try {
-                                    const photos = await fetchRepairPhotos(repair.id);
-                                    if (photos) {
+                                    const details = await fetchRepairDetails(repair.id);
+                                    if (details) {
                                       const win = window.open("", "_blank");
                                       const html = generateReceiptHtml({
                                         poleId: repair.poleId,
                                         techName: repair.techName,
                                         faultCategory: repair.faultCategory,
                                         timestamp: format(new Date(repair.timestamp), "MMM dd, yyyy @ h:mm a"),
-                                        beforePhoto: photos.before,
-                                        afterPhoto: photos.after,
-                                        workNotes: repair.workNotes,
+                                        beforePhoto: details.before,
+                                        afterPhoto: details.after,
+                                        workNotes: details.notes,
                                         ugLogo: ugLogo
                                       });
                                       win?.document.write(html);
@@ -681,17 +681,17 @@ const Dashboard = () => {
                             onClick={async () => {
                               setProcessingReceipt(true);
                               try {
-                                const photos = await fetchRepairPhotos(repair.id);
-                                if (photos) {
+                                const details = await fetchRepairDetails(repair.id);
+                                if (details) {
                                   const win = window.open("", "_blank");
                                   const html = generateReceiptHtml({
                                     poleId: repair.poleId,
                                     techName: repair.techName,
                                     faultCategory: repair.faultCategory,
                                     timestamp: format(new Date(repair.timestamp), "MMM dd, yyyy @ h:mm a"),
-                                    beforePhoto: photos.before,
-                                    afterPhoto: photos.after,
-                                    workNotes: repair.workNotes,
+                                    beforePhoto: details.before,
+                                    afterPhoto: details.after,
+                                    workNotes: details.notes,
                                     ugLogo: ugLogo
                                   });
                                   win?.document.write(html);
@@ -736,7 +736,7 @@ const Dashboard = () => {
 
       <PoleDrawer pole={selectedPole} open={drawerOpen} onClose={() => setDrawerOpen(false)} />
       {processingReceipt && <LoadingScreen message="Retrieving Documentation..." translucent />}
-    </div>
+    </div >
   );
 };
 

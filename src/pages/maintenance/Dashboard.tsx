@@ -25,15 +25,15 @@ import {
 import { format } from "date-fns";
 
 const ReportDetailsModal = ({ report, poleId }: { report: any, poleId: string }) => {
-    const { fetchReportPhoto } = usePoles();
+    const { fetchReportDetails } = usePoles();
     const [photo, setPhoto] = useState<string | null>(null);
     const [loadingPhoto, setLoadingPhoto] = useState(false);
 
     const handleOpen = async () => {
         if (!photo && !loadingPhoto) {
             setLoadingPhoto(true);
-            const fetchedPhoto = await fetchReportPhoto(report.id);
-            setPhoto(fetchedPhoto);
+            const details = await fetchReportDetails(report.id);
+            setPhoto(details?.photoUrl || null);
             setLoadingPhoto(false);
         }
     };

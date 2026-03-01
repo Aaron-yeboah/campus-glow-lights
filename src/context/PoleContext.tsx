@@ -7,7 +7,7 @@ export interface FaultReport {
   faultType: string;
   severity: "Low" | "Medium" | "High" | "Critical";
   description: string;
-  photoUrl?: string; // Opt out for initial fetch to increase speed
+  photoUrl?: string;
   timestamp: Date;
   reportedBy: string;
   contactInfo: string;
@@ -29,9 +29,9 @@ export interface Repair {
   poleId: string;
   techName: string;
   faultCategory: string;
-  workNotes: string;
-  beforePhotoUrl?: string; // Opt out for initial fetch
-  afterPhotoUrl?: string; // Opt out for initial fetch
+  workNotes?: string;
+  beforePhotoUrl?: string;
+  afterPhotoUrl?: string;
   status: string;
   timestamp: Date;
 }
@@ -46,8 +46,8 @@ interface PoleContextType {
   addPole: (pole: Partial<Pole>) => Promise<void>;
   deletePole: (id: string) => Promise<void>;
   deleteRepair: (id: string) => Promise<void>;
-  fetchReportPhoto: (id: string) => Promise<string | null>;
-  fetchRepairPhotos: (id: string) => Promise<{ before: string, after: string } | null>;
+  fetchReportDetails: (id: string) => Promise<{ photoUrl: string | null, description: string } | null>;
+  fetchRepairDetails: (id: string) => Promise<{ before: string, after: string, notes: string } | null>;
   fetchPoleBeforePhoto: (id: string) => Promise<string | null>;
   loading: boolean;
   loadingRepairs: boolean;
@@ -67,7 +67,7 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
         .from("poles")
         .select(`
           id, zone, status, days_outage, last_inspected, install_date,
-          reports (id, pole_id, fault_type, severity, description, timestamp, reported_by, contact_info, photo_url)
+          reports (id, pole_id, fault_type, severity, description, timestamp, reported_by, contact_info)
         `);
 
       if (polesError) throw polesError;
@@ -104,7 +104,7 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { data, error } = await supabase
         .from("repairs")
-        .select("id, pole_id, tech_name, fault_category, work_notes, status, timestamp")
+        .select("id, pole_id, tech_name, fault_category, status, timestamp")
         .order("timestamp", { ascending: false });
 
       if (error) throw error;
@@ -125,6 +125,18 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoadingRepairs(false);
     }
+  };
+
+  const fetchReportDetails = async (id: string) => {
+    const { data, error } = await supabase.from("reports").select("photo_url, description").eq("id", id).single();
+    if (error) return null;
+    return { photoUrl: data.photo_url, description: data.description };
+  };
+
+  const fetchRepairDetails = async (id: string) => {
+    const { data, error } = await supabase.from("repairs").select("before_photo_url, after_photo_url, work_notes").eq("id", id).single();
+    if (error) return null;
+    return { before: data.before_photo_url, after: data.after_photo_url, notes: data.work_notes };
   };
 
   useEffect(() => {
@@ -296,18 +308,6 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const fetchReportPhoto = async (id: string) => {
-    const { data, error } = await supabase.from("reports").select("photo_url").eq("id", id).single();
-    if (error) return null;
-    return data.photo_url;
-  };
-
-  const fetchRepairPhotos = async (id: string) => {
-    const { data, error } = await supabase.from("repairs").select("before_photo_url, after_photo_url").eq("id", id).single();
-    if (error) return null;
-    return { before: data.before_photo_url, after: data.after_photo_url };
-  };
-
   const fetchPoleBeforePhoto = async (id: string) => {
     const { data, error } = await supabase.from("poles").select("current_repair_before_photo").eq("id", id).single();
     if (error) return null;
@@ -325,8 +325,8 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
       addPole,
       deletePole,
       deleteRepair,
-      fetchReportPhoto,
-      fetchRepairPhotos,
+      fetchReportDetails,
+      fetchRepairDetails,
       fetchPoleBeforePhoto,
       loading,
       loadingRepairs

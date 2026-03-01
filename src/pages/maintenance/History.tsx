@@ -17,7 +17,7 @@ import ugLogo from "@/assets/ug-logo.png";
 import { generateReceiptHtml } from "@/lib/receipt-utils";
 
 const MaintenanceHistory = () => {
-    const { repairs, loadingRepairs, fetchRepairPhotos, deleteRepair } = usePoles();
+    const { repairs, loadingRepairs, fetchRepairDetails, deleteRepair } = usePoles();
     const [search, setSearch] = useState("");
     const [processingReceipt, setProcessingReceipt] = useState(false);
 
@@ -95,17 +95,17 @@ const MaintenanceHistory = () => {
                                                 onClick={async () => {
                                                     setProcessingReceipt(true);
                                                     try {
-                                                        const photos = await fetchRepairPhotos(f.id);
-                                                        if (photos) {
+                                                        const details = await fetchRepairDetails(f.id);
+                                                        if (details) {
                                                             const win = window.open("", "_blank");
                                                             const html = generateReceiptHtml({
                                                                 poleId: f.poleId,
                                                                 techName: f.techName,
                                                                 faultCategory: f.faultCategory,
                                                                 timestamp: format(new Date(f.timestamp), "MMM dd, yyyy @ h:mm a"),
-                                                                beforePhoto: photos.before,
-                                                                afterPhoto: photos.after,
-                                                                workNotes: f.workNotes,
+                                                                beforePhoto: details.before,
+                                                                afterPhoto: details.after,
+                                                                workNotes: details.notes,
                                                                 ugLogo: ugLogo
                                                             });
                                                             win?.document.write(html);
@@ -113,7 +113,8 @@ const MaintenanceHistory = () => {
                                                         } else {
                                                             toast.error("Documentation not found.");
                                                         }
-                                                    } catch (e) {
+                                                    }
+                                                    catch (e) {
                                                         toast.error("Error generating receipt.");
                                                     } finally {
                                                         setProcessingReceipt(false);
@@ -171,17 +172,17 @@ const MaintenanceHistory = () => {
                                         onClick={async () => {
                                             setProcessingReceipt(true);
                                             try {
-                                                const photos = await fetchRepairPhotos(f.id);
-                                                if (photos) {
+                                                const details = await fetchRepairDetails(f.id);
+                                                if (details) {
                                                     const win = window.open("", "_blank");
                                                     const html = generateReceiptHtml({
                                                         poleId: f.poleId,
                                                         techName: f.techName,
                                                         faultCategory: f.faultCategory,
                                                         timestamp: format(new Date(f.timestamp), "MMM dd, yyyy @ h:mm a"),
-                                                        beforePhoto: photos.before,
-                                                        afterPhoto: photos.after,
-                                                        workNotes: f.workNotes,
+                                                        beforePhoto: details.before,
+                                                        afterPhoto: details.after,
+                                                        workNotes: details.notes,
                                                         ugLogo: ugLogo
                                                     });
                                                     win?.document.write(html);
@@ -189,7 +190,8 @@ const MaintenanceHistory = () => {
                                                 } else {
                                                     toast.error("Photos missing");
                                                 }
-                                            } catch (e) {
+                                            }
+                                            catch (e) {
                                                 toast.error("Error");
                                             } finally {
                                                 setProcessingReceipt(false);

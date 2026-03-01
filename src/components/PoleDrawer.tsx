@@ -2,7 +2,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { MapPin, Clock, AlertTriangle, Calendar, ShieldAlert, FileText, Phone } from "lucide-react";
+import { MapPin, Clock, AlertTriangle, Calendar, ShieldAlert, FileText, Phone, Camera } from "lucide-react";
 import { Pole, usePoles } from "@/context/PoleContext";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -23,7 +23,7 @@ const severityColor: Record<string, string> = {
 };
 
 const PoleDrawer = ({ pole, open, onClose }: PoleDrawerProps) => {
-  const { markRepaired, fetchReportPhoto } = usePoles();
+  const { markRepaired, fetchReportDetails } = usePoles();
   const [fetchingPhoto, setFetchingPhoto] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
 
@@ -120,36 +120,27 @@ const PoleDrawer = ({ pole, open, onClose }: PoleDrawerProps) => {
                         <p>{r.contactInfo}</p>
                       </div>
                     )}
-                    {r.photoUrl ? (
-                      <div
-                        className="relative group cursor-pointer overflow-hidden rounded-md"
-                        onClick={async () => {
-                          setFetchingPhoto(true);
-                          try {
-                            // Even if we have it, we fulfill the request to "fetch from supabase" with the loading screen
-                            const url = await fetchReportPhoto(r.id);
-                            if (url) {
-                              setViewingPhoto(url);
-                            } else {
-                              toast.error("Could not retrieve photo");
-                            }
-                          } catch (e) {
-                            toast.error("Error fetching photo");
-                          } finally {
-                            setFetchingPhoto(false);
+                    <div
+                      className="relative group cursor-pointer overflow-hidden rounded-xl border-2 border-dashed border-[#1A365D]/20 bg-[#1A365D]/5 p-6 hover:bg-[#1A365D]/10 hover:border-[#1A365D]/40 transition-all text-center"
+                      onClick={async () => {
+                        setFetchingPhoto(true);
+                        try {
+                          const details = await fetchReportDetails(r.id);
+                          if (details?.photoUrl) {
+                            setViewingPhoto(details.photoUrl);
+                          } else {
+                            toast.error("No photo evidence attached to this report.");
                           }
-                        }}
-                      >
-                        <img src={r.photoUrl} alt="Fault" className="w-full h-32 object-cover transition-transform group-hover:scale-105" />
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <span className="text-white text-[10px] font-bold uppercase tracking-widest bg-primary/80 px-3 py-1.5 rounded-full">Click to Enlargen</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="py-4 text-center border-2 border-dashed rounded-md bg-muted/20">
-                        <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">No evidence photo provided</p>
-                      </div>
-                    )}
+                        } catch (e) {
+                          toast.error("Error fetching photo evidence.");
+                        } finally {
+                          setFetchingPhoto(false);
+                        }
+                      }}
+                    >
+                      <Camera className="w-6 h-6 text-[#1A365D]/40 mx-auto mb-2 group-hover:scale-110 transition-transform" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-[#1A365D]/60 group-hover:text-[#1A365D]">View Photo Evidence</span>
+                    </div>
                   </div>
                 ))}
               </div>
