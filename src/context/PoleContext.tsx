@@ -16,27 +16,46 @@ export interface FaultReport {
 export interface Pole {
   id: string;
   zone: string;
-  status: "Operational" | "Defective";
+  status: "Operational" | "Defective" | "In Progress";
   daysOutage: number;
   lastInspected: Date;
   installDate: Date;
   reports: FaultReport[];
+  beforePhoto?: string; // Temp storage for "In Progress" states
+}
+
+export interface Repair {
+  id: string;
+  poleId: string;
+  techName: string;
+  faultCategory: string;
+  workNotes: string;
+  beforePhotoUrl: string;
+  afterPhotoUrl: string;
+  status: string;
+  timestamp: Date;
 }
 
 interface PoleContextType {
   poles: Pole[];
+  repairs: Repair[];
   submitReport: (poleId: string, faultType: string, severity: string, description: string, photoUrl: string, contactInfo: string) => Promise<void>;
+  startRepair: (poleId: string, beforePhoto: string) => Promise<void>;
   markRepaired: (poleId: string) => Promise<void>;
+  submitRepair: (repair: Partial<Repair>) => Promise<void>;
   addPole: (pole: Partial<Pole>) => Promise<void>;
   deletePole: (id: string) => Promise<void>;
   loading: boolean;
+  loadingRepairs: boolean;
 }
 
 const PoleContext = createContext<PoleContextType | undefined>(undefined);
 
 export const PoleProvider = ({ children }: { children: ReactNode }) => {
   const [poles, setPoles] = useState<Pole[]>([]);
+  const [repairs, setRepairs] = useState<Repair[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingRepairs, setLoadingRepairs] = useState(true);
 
   const fetchPoles = async () => {
     try {
@@ -56,6 +75,7 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
         daysOutage: p.days_outage || 0,
         lastInspected: new Date(p.last_inspected),
         installDate: new Date(p.install_date),
+        beforePhoto: p.current_repair_before_photo,
         reports: (p.reports || []).map((r: any) => ({
           id: r.id,
           poleId: r.pole_id,
@@ -77,11 +97,41 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const fetchRepairs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("repairs")
+        .select("*")
+        .order("timestamp", { ascending: false });
+
+      if (error) throw error;
+
+      const mappedRepairs: Repair[] = (data || []).map((r: any) => ({
+        id: r.id,
+        poleId: r.pole_id,
+        techName: r.tech_name,
+        faultCategory: r.fault_category,
+        workNotes: r.work_notes,
+        beforePhotoUrl: r.before_photo_url,
+        afterPhotoUrl: r.after_photo_url,
+        status: r.status,
+        timestamp: new Date(r.timestamp),
+      }));
+
+      setRepairs(mappedRepairs);
+    } catch (error) {
+      console.error("Error fetching repairs:", error);
+    } finally {
+      setLoadingRepairs(false);
+    }
+  };
+
   useEffect(() => {
     fetchPoles();
+    fetchRepairs();
 
     const channel = supabase
-      .channel("pole-changes")
+      .channel("db-changes")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "poles" },
@@ -91,6 +141,11 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
         "postgres_changes",
         { event: "*", schema: "public", table: "reports" },
         () => fetchPoles()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "repairs" },
+        () => fetchRepairs()
       )
       .subscribe();
 
@@ -134,16 +189,64 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const startRepair = async (poleId: string, beforePhoto: string) => {
+    try {
+      const { error } = await supabase
+        .from("poles")
+        .update({
+          status: "In Progress",
+          current_repair_before_photo: beforePhoto
+        })
+        .eq("id", poleId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error starting repair:", error);
+      throw error;
+    }
+  };
+
   const markRepaired = async (poleId: string) => {
     try {
       const { error } = await supabase
         .from("poles")
-        .update({ status: "Operational", days_outage: 0 })
+        .update({
+          status: "Operational",
+          days_outage: 0,
+          last_inspected: new Date().toISOString(),
+          current_repair_before_photo: null
+        })
         .eq("id", poleId);
 
       if (error) throw error;
     } catch (error) {
       console.error("Error marking pole as repaired:", error);
+      throw error;
+    }
+  };
+
+  const submitRepair = async (repair: Partial<Repair>) => {
+    try {
+      const { error } = await supabase.from("repairs").insert([
+        {
+          pole_id: repair.poleId,
+          tech_name: repair.techName,
+          fault_category: repair.faultCategory,
+          work_notes: repair.workNotes,
+          before_photo_url: repair.beforePhotoUrl,
+          after_photo_url: repair.afterPhotoUrl,
+          status: "Success",
+        },
+      ]);
+
+      if (error) throw error;
+
+      // When submitting a repair, we also mark the pole as operational
+      if (repair.poleId) {
+        await markRepaired(repair.poleId);
+      }
+    } catch (error) {
+      console.error("Error submitting repair:", error);
       throw error;
     }
   };
@@ -179,7 +282,18 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <PoleContext.Provider value={{ poles, submitReport, markRepaired, addPole, deletePole, loading }}>
+    <PoleContext.Provider value={{
+      poles,
+      repairs,
+      submitReport,
+      startRepair,
+      markRepaired,
+      submitRepair,
+      addPole,
+      deletePole,
+      loading,
+      loadingRepairs
+    }}>
       {children}
     </PoleContext.Provider>
   );

@@ -9,6 +9,10 @@ import Dashboard from "./pages/Dashboard";
 import Report from "./pages/Report";
 import FAQ from "./pages/FAQ";
 import NotFound from "./pages/NotFound";
+import MaintenanceLayout from "./pages/maintenance/MaintenanceLayout";
+import MaintenanceDashboard from "./pages/maintenance/Dashboard";
+import RepairForm from "./pages/maintenance/RepairForm";
+import MaintenanceHistory from "./pages/maintenance/History";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +28,14 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/report" element={<Report />} />
             <Route path="/faq" element={<FAQ />} />
+
+            {/* Maintenance Portal */}
+            <Route path="/maintenance" element={<MaintenanceLayout />}>
+              <Route index element={<MaintenanceDashboard />} />
+              <Route path="repair/:poleId" element={<RepairForm />} />
+              <Route path="history" element={<MaintenanceHistory />} />
+            </Route>
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

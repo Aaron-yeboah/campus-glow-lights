@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import {
   AlertTriangle, CheckCircle, Wrench, Search, Eye, QrCode, LayoutDashboard,
   Activity, Clock, TrendingUp, Filter, ArrowUpDown, BarChart3, MapPin,
-  Trash2, PlusCircle, HelpCircle
+  Trash2, PlusCircle, HelpCircle, FileText, User, History as HistoryIcon
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
@@ -25,9 +25,10 @@ import {
   XAxis, YAxis, Tooltip, CartesianGrid
 } from "recharts";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 
 const Dashboard = () => {
-  const { poles, loading, deletePole } = usePoles();
+  const { poles, loading, deletePole, repairs } = usePoles();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [selectedPole, setSelectedPole] = useState<Pole | null>(null);
@@ -45,6 +46,7 @@ const Dashboard = () => {
   const activeFaults = poles.filter((p) => p.status === "Defective").length;
   const operational = poles.filter((p) => p.status === "Operational").length;
   const totalReports = poles.reduce((sum, p) => sum + p.reports.length, 0);
+  const totalRepairs = repairs.length;
   const criticalFaults = poles.filter((p) => p.daysOutage >= 5).length;
   const avgOutage = activeFaults > 0 ? Math.round(poles.filter(p => p.status === "Defective").reduce((s, p) => s + p.daysOutage, 0) / activeFaults) : 0;
   const healthPercent = poles.length > 0 ? Math.round((operational / poles.length) * 100) : 0;
@@ -137,6 +139,9 @@ const Dashboard = () => {
                 <TabsTrigger value="qr">
                   <QrCode className="w-4 h-4 mr-1.5" /> QR Management
                 </TabsTrigger>
+                <TabsTrigger value="maintenance">
+                  <HistoryIcon className="w-4 h-4 mr-1.5" /> Maintenance
+                </TabsTrigger>
               </TabsList>
 
               <AddPoleModal />
@@ -149,7 +154,7 @@ const Dashboard = () => {
                 <StatCard title="Operational" value={operational} icon={CheckCircle} variant="success" subtitle={`${healthPercent}% health`} />
                 <StatCard title="Total Poles" value={poles.length} icon={Activity} variant="default" subtitle="All zones" />
                 <StatCard title="Total Reports" value={totalReports} icon={TrendingUp} variant="warning" subtitle="All time" />
-                <StatCard title="Avg. Outage" value={`${avgOutage}d`} icon={Wrench} variant="default" subtitle="Per fault" />
+                <StatCard title="Total Repairs" value={totalRepairs} icon={Wrench} variant="default" subtitle="Completed fixes" />
               </div>
 
               {/* System Health Bar */}
@@ -404,6 +409,138 @@ const Dashboard = () => {
 
             <TabsContent value="qr">
               <QRGenerator />
+            </TabsContent>
+
+            <TabsContent value="maintenance" className="space-y-6">
+              <div className="rounded-xl border bg-card">
+                <div className="p-4 border-b flex flex-col sm:flex-row sm:items-center gap-3">
+                  <h2 className="font-display font-semibold text-foreground">Maintenance Reports</h2>
+                  <div className="flex flex-col sm:ml-auto gap-2 w-full sm:w-auto">
+                    <div className="relative w-full sm:w-60">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search pole or tech..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Technician</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pole ID</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fault Category</th>
+                        <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Documentation</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {repairs.length > 0 ? (
+                        repairs.filter((r) =>
+                          r.poleId.toLowerCase().includes(search.toLowerCase()) ||
+                          r.techName.toLowerCase().includes(search.toLowerCase()) ||
+                          r.faultCategory.toLowerCase().includes(search.toLowerCase())
+                        ).map((repair) => (
+                          <tr key={repair.id} className="hover:bg-muted/30 transition-colors">
+                            <td className="px-4 py-3 text-xs">
+                              {format(new Date(repair.timestamp), "MMM dd, yyyy")}
+                              <br />
+                              <span className="text-muted-foreground">{format(new Date(repair.timestamp), "h:mm a")}</span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">
+                                  {repair.techName.split(' ').map((n) => n[0]).join('')}
+                                </div>
+                                <span className="text-sm font-medium">{repair.techName}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 font-mono font-semibold text-sm">{repair.poleId}</td>
+                            <td className="px-4 py-3">
+                              <Badge variant="outline">{repair.faultCategory}</Badge>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs font-bold gap-2"
+                                  onClick={() => {
+                                    const win = window.open("", "_blank");
+                                    if (win) {
+                                      win.document.write(`
+                                      <html>
+                                        <head><title>Receipt - ${repair.poleId}</title></head>
+                                        <body style="margin:0; background:#0f172a; display:flex; flex-direction:column; align-items:center; color:white; font-family:sans-serif; padding:40px;">
+                                          <h1 style="margin-bottom:10px;">Maintenance Receipt: ${repair.poleId}</h1>
+                                          <p style="color:rgba(255,255,255,0.6); margin-bottom:30px;">Digitally signed by administrator for University of Ghana</p>
+                                          
+                                          <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px; width:100%; max-width:1100px;">
+                                            <div style="background:rgba(255,255,255,0.03); padding:20px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);">
+                                              <p style="font-weight:bold; letter-spacing:2px; font-size:12px; color:rgba(255,255,255,0.4);">BEFORE REPAIR</p>
+                                              <img src="${repair.beforePhotoUrl}" style="width:100%; height:400px; object-fit:cover; border-radius:12px; margin-top:10px;"/>
+                                            </div>
+                                            <div style="background:rgba(255,255,255,0.03); padding:20px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);">
+                                              <p style="font-weight:bold; letter-spacing:2px; font-size:12px; color:rgba(255,255,255,0.4);">AFTER REPAIR</p>
+                                              <img src="${repair.afterPhotoUrl}" style="width:100%; height:400px; object-fit:cover; border-radius:12px; margin-top:10px;"/>
+                                            </div>
+                                          </div>
+
+                                          <div style="margin-top:40px; width:100%; max-width:1100px; display:grid; grid-template-columns:1fr 1fr; gap:40px;">
+                                            <div style="background:rgba(255,255,255,0.05); padding:30px; border-radius:20px;">
+                                              <h3 style="margin-top:0; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px;">Repair Details</h3>
+                                              <p><b>Pole ID:</b> ${repair.poleId}</p>
+                                              <p><b>Fixed By:</b> ${repair.techName}</p>
+                                              <p><b>Category:</b> ${repair.faultCategory}</p>
+                                              <p><b>Date:</b> ${new Date(repair.timestamp).toLocaleString()}</p>
+                                            </div>
+                                            <div style="background:rgba(255,255,255,0.05); padding:30px; border-radius:20px;">
+                                              <h3 style="margin-top:0; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px;">Work Notes</h3>
+                                              <p style="line-height:1.6; color:rgba(255,255,255,0.8);">${repair.workNotes || "No specific notes recorded for this action."}</p>
+                                            </div>
+                                          </div>
+                                        </body>
+                                      </html>
+                                    `);
+                                      win.document.close();
+                                    }
+                                  }}
+                                >
+                                  <FileText className="w-3.5 h-3.5" />
+                                  View Evidence
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:bg-destructive/10"
+                                  onClick={async () => {
+                                    if (confirm("Permanently delete this maintenance record?")) {
+                                      const { error } = await supabase.from("repairs").delete().eq("id", repair.id);
+                                      if (error) toast.error("Failed to delete record");
+                                      else toast.success("Record removed");
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))) : null}
+                    </tbody>
+                  </table>
+                  {repairs.length === 0 && (
+                    <div className="py-20 text-center">
+                      <p className="text-muted-foreground text-sm">No maintenance records found.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </TabsContent>
           </Tabs>
         )}
