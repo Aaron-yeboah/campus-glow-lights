@@ -2,8 +2,9 @@ import { useState, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Camera, Upload, CheckCircle, AlertTriangle, Lightbulb,
-  MapPin, Phone, FileText, ShieldAlert
+  MapPin, Phone, FileText, ShieldAlert, HelpCircle
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
@@ -121,14 +122,27 @@ const Report = () => {
       {/* Header */}
       <div className="bg-primary text-primary-foreground px-4 py-6 shadow-lg relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
-        <div className="flex items-center gap-4 max-w-lg mx-auto relative">
-          <div className="w-12 h-12 rounded-xl bg-white/20 p-2 shadow-inner">
-            <img src={ugLogo} alt="UG Logo" className="w-full h-full object-contain" />
+        <div className="flex items-center justify-between max-w-lg mx-auto relative">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-white/20 p-2 shadow-inner">
+              <img src={ugLogo} alt="UG Logo" className="w-full h-full object-contain" />
+            </div>
+            <div>
+              <h1 className="text-xl font-display font-bold tracking-tight">Campus Glow</h1>
+              <p className="text-[10px] opacity-80 uppercase tracking-widest font-bold text-white/90">University of Ghana Safety</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-display font-bold tracking-tight">Campus Glow</h1>
-            <p className="text-[10px] opacity-80 uppercase tracking-widest font-bold text-white/90">University of Ghana Safety</p>
-          </div>
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="text-white hover:bg-white/10 rounded-full gap-2 px-4 h-9 font-bold"
+          >
+            <Link to="/faq">
+              <HelpCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">Support</span>
+            </Link>
+          </Button>
         </div>
       </div>
 

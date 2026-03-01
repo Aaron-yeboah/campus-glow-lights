@@ -22,7 +22,7 @@ const Index = () => {
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 font-semibold">
+            <Button asChild size="lg" variant="secondary" className="font-semibold">
               <Link to="/report?poleId=UG-LG-001">
                 <Lightbulb className="w-5 h-5 mr-2" />
                 Try Reporter

@@ -3,8 +3,9 @@ import { useSearchParams } from "react-router-dom";
 import {
   AlertTriangle, CheckCircle, Wrench, Search, Eye, QrCode, LayoutDashboard,
   Activity, Clock, TrendingUp, Filter, ArrowUpDown, BarChart3, MapPin,
-  Trash2, PlusCircle
+  Trash2, PlusCircle, HelpCircle
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -103,11 +104,17 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 text-xs opacity-75">
+            <div className="hidden sm:flex items-center gap-2 text-xs opacity-75 mr-2">
               <Clock className="w-3.5 h-3.5" />
               {format(new Date(), "MMM d, yyyy h:mm a")}
             </div>
-            <Badge variant="outline" className="border-primary-foreground/30 text-primary-foreground text-xs">
+            <Button asChild variant="ghost" size="sm" className="text-white hover:bg-white/10 rounded-full gap-2 px-3 h-8 text-xs font-bold">
+              <Link to="/faq">
+                <HelpCircle className="w-3.5 h-3.5" />
+                Support
+              </Link>
+            </Button>
+            <Badge variant="outline" className="border-primary-foreground/30 text-primary-foreground text-xs whitespace-nowrap">
               Admin Portal
             </Badge>
           </div>
