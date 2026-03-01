@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import LoadingScreen from "@/components/LoadingScreen";
 import StatCard from "@/components/StatCard";
 import PoleDrawer from "@/components/PoleDrawer";
 import QRGenerator from "@/components/QRGenerator";
@@ -114,296 +115,291 @@ const Dashboard = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-            <TabsList>
-              <TabsTrigger value="dashboard">
-                <LayoutDashboard className="w-4 h-4 mr-1.5" /> Dashboard
-              </TabsTrigger>
-              <TabsTrigger value="analytics">
-                <BarChart3 className="w-4 h-4 mr-1.5" /> Analytics
-              </TabsTrigger>
-              <TabsTrigger value="qr">
-                <QrCode className="w-4 h-4 mr-1.5" /> QR Management
-              </TabsTrigger>
-            </TabsList>
+        {loading ? (
+          <LoadingScreen message="Syncing with Supabase..." />
+        ) : (
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+              <TabsList>
+                <TabsTrigger value="dashboard">
+                  <LayoutDashboard className="w-4 h-4 mr-1.5" /> Dashboard
+                </TabsTrigger>
+                <TabsTrigger value="analytics">
+                  <BarChart3 className="w-4 h-4 mr-1.5" /> Analytics
+                </TabsTrigger>
+                <TabsTrigger value="qr">
+                  <QrCode className="w-4 h-4 mr-1.5" /> QR Management
+                </TabsTrigger>
+              </TabsList>
 
-            <AddPoleModal />
-          </div>
+              <AddPoleModal />
+            </div>
 
-          <TabsContent value="dashboard" className="space-y-6">
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-20 animate-pulse">
-                <Activity className="w-12 h-12 text-primary/50 mb-4 animate-spin" />
-                <p className="text-muted-foreground font-medium">Syncing with Supabase...</p>
+            <TabsContent value="dashboard" className="space-y-6">
+              {/* Stats */}
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                <StatCard title="Active Faults" value={activeFaults} icon={AlertTriangle} variant="destructive" subtitle={`${criticalFaults} critical`} />
+                <StatCard title="Operational" value={operational} icon={CheckCircle} variant="success" subtitle={`${healthPercent}% health`} />
+                <StatCard title="Total Poles" value={poles.length} icon={Activity} variant="default" subtitle="All zones" />
+                <StatCard title="Total Reports" value={totalReports} icon={TrendingUp} variant="warning" subtitle="All time" />
+                <StatCard title="Avg. Outage" value={`${avgOutage}d`} icon={Wrench} variant="default" subtitle="Per fault" />
               </div>
-            ) : (
-              <>
-                {/* Stats */}
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                  <StatCard title="Active Faults" value={activeFaults} icon={AlertTriangle} variant="destructive" subtitle={`${criticalFaults} critical`} />
-                  <StatCard title="Operational" value={operational} icon={CheckCircle} variant="success" subtitle={`${healthPercent}% health`} />
-                  <StatCard title="Total Poles" value={poles.length} icon={Activity} variant="default" subtitle="All zones" />
-                  <StatCard title="Total Reports" value={totalReports} icon={TrendingUp} variant="warning" subtitle="All time" />
-                  <StatCard title="Avg. Outage" value={`${avgOutage}d`} icon={Wrench} variant="default" subtitle="Per fault" />
-                </div>
 
-                {/* System Health Bar */}
-                <div className="rounded-xl border bg-card p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-medium text-foreground">System Health</p>
-                    <span className={`text-sm font-bold ${healthPercent >= 80 ? "text-success" : healthPercent >= 50 ? "text-warning" : "text-destructive"}`}>{healthPercent}%</span>
-                  </div>
-                  <Progress value={healthPercent} className="h-2.5" />
-                  <p className="text-xs text-muted-foreground mt-1.5">{operational} of {poles.length} poles operational</p>
+              {/* System Health Bar */}
+              <div className="rounded-xl border bg-card p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-foreground">System Health</p>
+                  <span className={`text-sm font-bold ${healthPercent >= 80 ? "text-success" : healthPercent >= 50 ? "text-warning" : "text-destructive"}`}>{healthPercent}%</span>
                 </div>
+                <Progress value={healthPercent} className="h-2.5" />
+                <p className="text-xs text-muted-foreground mt-1.5">{operational} of {poles.length} poles operational</p>
+              </div>
 
-                {/* Table */}
-                <div className="rounded-xl border bg-card">
-                  <div className="p-4 border-b flex flex-col sm:flex-row sm:items-center gap-3">
-                    <h2 className="font-display font-semibold text-foreground">All Streetlights</h2>
-                    <div className="flex flex-col sm:flex-row sm:ml-auto gap-2 w-full sm:w-auto">
-                      <div className="relative w-full sm:w-60">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Search by ID or zone..."
-                          value={search}
-                          onChange={(e) => setSearch(e.target.value)}
-                          className="pl-9"
-                        />
-                      </div>
-                      <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-full sm:w-40">
-                          <Filter className="w-3.5 h-3.5 mr-1.5" />
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Status</SelectItem>
-                          <SelectItem value="Operational">Operational</SelectItem>
-                          <SelectItem value="Defective">Defective</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Select value={sortBy} onValueChange={setSortBy}>
-                        <SelectTrigger className="w-full sm:w-40">
-                          <ArrowUpDown className="w-3.5 h-3.5 mr-1.5" />
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="id">Sort by ID</SelectItem>
-                          <SelectItem value="zone">Sort by Zone</SelectItem>
-                          <SelectItem value="status">Sort by Status</SelectItem>
-                          <SelectItem value="outage">Sort by Outage</SelectItem>
-                          <SelectItem value="reports">Sort by Reports</SelectItem>
-                        </SelectContent>
-                      </Select>
+              {/* Table */}
+              <div className="rounded-xl border bg-card">
+                <div className="p-4 border-b flex flex-col sm:flex-row sm:items-center gap-3">
+                  <h2 className="font-display font-semibold text-foreground">All Streetlights</h2>
+                  <div className="flex flex-col sm:flex-row sm:ml-auto gap-2 w-full sm:w-auto">
+                    <div className="relative w-full sm:w-60">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search by ID or zone..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="pl-9"
+                      />
                     </div>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="w-full sm:w-40">
+                        <Filter className="w-3.5 h-3.5 mr-1.5" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="Operational">Operational</SelectItem>
+                        <SelectItem value="Defective">Defective</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                      <SelectTrigger className="w-full sm:w-40">
+                        <ArrowUpDown className="w-3.5 h-3.5 mr-1.5" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="id">Sort by ID</SelectItem>
+                        <SelectItem value="zone">Sort by Zone</SelectItem>
+                        <SelectItem value="status">Sort by Status</SelectItem>
+                        <SelectItem value="outage">Sort by Outage</SelectItem>
+                        <SelectItem value="reports">Sort by Reports</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+                </div>
 
-                  <div className="px-4 py-2 border-b bg-muted/30">
-                    <p className="text-xs text-muted-foreground">Showing {filtered.length} of {poles.length} poles</p>
-                  </div>
+                <div className="px-4 py-2 border-b bg-muted/30">
+                  <p className="text-xs text-muted-foreground">Showing {filtered.length} of {poles.length} poles</p>
+                </div>
 
-                  {/* Desktop Table */}
-                  <div className="hidden sm:block overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b bg-muted/50">
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pole ID</th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Location</th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Outage</th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Reports</th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Inspected</th>
-                          <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
+                {/* Desktop Table */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pole ID</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Location</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Outage</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Reports</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Inspected</th>
+                        <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map((pole) => (
+                        <tr key={pole.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-3 font-mono font-semibold text-sm text-foreground">{pole.id}</td>
+                          <td className="px-4 py-3 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{pole.zone}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            {pole.status === "Operational" ? (
+                              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-success">
+                                <span className="w-2 h-2 rounded-full bg-success pulse-green" />
+                                Operational
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive">
+                                <span className="w-2 h-2 rounded-full bg-destructive glow-red" />
+                                Defective
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {pole.daysOutage > 0 ? (
+                              <span className={`font-medium ${pole.daysOutage >= 5 ? "text-destructive" : "text-warning"}`}>
+                                {pole.daysOutage}d
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge variant={pole.reports.length > 0 ? "secondary" : "outline"} className="text-xs">
+                              {pole.reports.length}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground">
+                            {format(new Date(pole.lastInspected), "MMM d")}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => { setSelectedPole(pole); setDrawerOpen(true); }}
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:bg-destructive/10"
+                                onClick={() => {
+                                  if (confirm(`Delete pole ${pole.id}?`)) {
+                                    deletePole(pole.id).then(() => toast.success("Pole deleted"));
+                                  }
+                                }}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {filtered.map((pole) => (
-                          <tr key={pole.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                            <td className="px-4 py-3 font-mono font-semibold text-sm text-foreground">{pole.id}</td>
-                            <td className="px-4 py-3 text-sm text-muted-foreground">
-                              <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{pole.zone}</span>
-                            </td>
-                            <td className="px-4 py-3">
-                              {pole.status === "Operational" ? (
-                                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-success">
-                                  <span className="w-2 h-2 rounded-full bg-success pulse-green" />
-                                  Operational
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive">
-                                  <span className="w-2 h-2 rounded-full bg-destructive glow-red" />
-                                  Defective
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-sm">
-                              {pole.daysOutage > 0 ? (
-                                <span className={`font-medium ${pole.daysOutage >= 5 ? "text-destructive" : "text-warning"}`}>
-                                  {pole.daysOutage}d
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              <Badge variant={pole.reports.length > 0 ? "secondary" : "outline"} className="text-xs">
-                                {pole.reports.length}
-                              </Badge>
-                            </td>
-                            <td className="px-4 py-3 text-xs text-muted-foreground">
-                              {format(new Date(pole.lastInspected), "MMM d")}
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => { setSelectedPole(pole); setDrawerOpen(true); }}
-                                >
-                                  <Eye className="w-3.5 h-3.5" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-destructive hover:bg-destructive/10"
-                                  onClick={() => {
-                                    if (confirm(`Delete pole ${pole.id}?`)) {
-                                      deletePole(pole.id).then(() => toast.success("Pole deleted"));
-                                    }
-                                  }}
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-                  {/* Mobile Cards */}
-                  <div className="sm:hidden divide-y">
-                    {filtered.map((pole) => (
-                      <div key={pole.id} className="p-4 space-y-2 active:bg-muted/30" onClick={() => { setSelectedPole(pole); setDrawerOpen(true); }}>
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono font-semibold text-sm text-foreground">{pole.id}</span>
-                          {pole.status === "Operational" ? (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-success">
-                              <span className="w-2 h-2 rounded-full bg-success pulse-green" /> Operational
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
-                              <span className="w-2 h-2 rounded-full bg-destructive glow-red" /> Defective
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3" />{pole.zone}</p>
-                          {pole.reports.length > 0 && <Badge variant="secondary" className="text-xs">{pole.reports.length} report{pole.reports.length !== 1 ? "s" : ""}</Badge>}
-                        </div>
-                        {pole.daysOutage > 0 && <p className="text-xs text-destructive font-medium">{pole.daysOutage} day{pole.daysOutage !== 1 ? "s" : ""} outage</p>}
+                {/* Mobile Cards */}
+                <div className="sm:hidden divide-y">
+                  {filtered.map((pole) => (
+                    <div key={pole.id} className="p-4 space-y-2 active:bg-muted/30" onClick={() => { setSelectedPole(pole); setDrawerOpen(true); }}>
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-semibold text-sm text-foreground">{pole.id}</span>
+                        {pole.status === "Operational" ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-success">
+                            <span className="w-2 h-2 rounded-full bg-success pulse-green" /> Operational
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
+                            <span className="w-2 h-2 rounded-full bg-destructive glow-red" /> Defective
+                          </span>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </TabsContent>
-
-          <TabsContent value="analytics" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Status Pie Chart */}
-              <div className="rounded-xl border bg-card p-5">
-                <h3 className="font-display font-semibold text-foreground mb-4">Status Distribution</h3>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={[
-                          { name: "Operational", value: operational },
-                          { name: "Defective", value: activeFaults },
-                        ]}
-                        cx="50%" cy="50%" innerRadius={60} outerRadius={90}
-                        dataKey="value" paddingAngle={4}
-                      >
-                        <Cell fill="hsl(142, 71%, 35%)" />
-                        <Cell fill="hsl(0, 72%, 51%)" />
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex justify-center gap-6 mt-2">
-                  <span className="flex items-center gap-1.5 text-xs"><span className="w-3 h-3 rounded-sm bg-success" /> Operational</span>
-                  <span className="flex items-center gap-1.5 text-xs"><span className="w-3 h-3 rounded-sm bg-destructive" /> Defective</span>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3" />{pole.zone}</p>
+                        {pole.reports.length > 0 && <Badge variant="secondary" className="text-xs">{pole.reports.length} report{pole.reports.length !== 1 ? "s" : ""}</Badge>}
+                      </div>
+                      {pole.daysOutage > 0 && <p className="text-xs text-destructive font-medium">{pole.daysOutage} day{pole.daysOutage !== 1 ? "s" : ""} outage</p>}
+                    </div>
+                  ))}
                 </div>
               </div>
+            </TabsContent>
 
-              {/* Fault Types Bar Chart */}
-              <div className="rounded-xl border bg-card p-5">
-                <h3 className="font-display font-semibold text-foreground mb-4">Fault Types</h3>
-                {faultTypeData.length > 0 ? (
+            <TabsContent value="analytics" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Status Pie Chart */}
+                <div className="rounded-xl border bg-card p-5">
+                  <h3 className="font-display font-semibold text-foreground mb-4">Status Distribution</h3>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={faultTypeData} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 20%, 88%)" />
-                        <XAxis type="number" allowDecimals={false} />
-                        <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 12 }} />
+                      <PieChart>
+                        <Pie
+                          data={[
+                            { name: "Operational", value: operational },
+                            { name: "Defective", value: activeFaults },
+                          ]}
+                          cx="50%" cy="50%" innerRadius={60} outerRadius={90}
+                          dataKey="value" paddingAngle={4}
+                        >
+                          <Cell fill="hsl(142, 71%, 35%)" />
+                          <Cell fill="hsl(0, 72%, 51%)" />
+                        </Pie>
                         <Tooltip />
-                        <Bar dataKey="value" fill="hsl(215, 56%, 23%)" radius={[0, 4, 4, 0]} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex justify-center gap-6 mt-2">
+                    <span className="flex items-center gap-1.5 text-xs"><span className="w-3 h-3 rounded-sm bg-success" /> Operational</span>
+                    <span className="flex items-center gap-1.5 text-xs"><span className="w-3 h-3 rounded-sm bg-destructive" /> Defective</span>
+                  </div>
+                </div>
+
+                {/* Fault Types Bar Chart */}
+                <div className="rounded-xl border bg-card p-5">
+                  <h3 className="font-display font-semibold text-foreground mb-4">Fault Types</h3>
+                  {faultTypeData.length > 0 ? (
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={faultTypeData} layout="vertical">
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 20%, 88%)" />
+                          <XAxis type="number" allowDecimals={false} />
+                          <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 12 }} />
+                          <Tooltip />
+                          <Bar dataKey="value" fill="hsl(215, 56%, 23%)" radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-10 text-center">No reports yet</p>
+                  )}
+                </div>
+
+                {/* Zone Health Overview */}
+                <div className="rounded-xl border bg-card p-5 lg:col-span-2">
+                  <h3 className="font-display font-semibold text-foreground mb-4">Zone Health</h3>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={zoneData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 20%, 88%)" />
+                        <XAxis dataKey="zone" tick={{ fontSize: 11 }} />
+                        <YAxis allowDecimals={false} />
+                        <Tooltip />
+                        <Bar dataKey="operational" stackId="a" fill="hsl(142, 71%, 35%)" name="Operational" />
+                        <Bar dataKey="defective" stackId="a" fill="hsl(0, 72%, 51%)" name="Defective" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground py-10 text-center">No reports yet</p>
-                )}
-              </div>
+                </div>
 
-              {/* Zone Health Overview */}
-              <div className="rounded-xl border bg-card p-5 lg:col-span-2">
-                <h3 className="font-display font-semibold text-foreground mb-4">Zone Health</h3>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={zoneData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 20%, 88%)" />
-                      <XAxis dataKey="zone" tick={{ fontSize: 11 }} />
-                      <YAxis allowDecimals={false} />
-                      <Tooltip />
-                      <Bar dataKey="operational" stackId="a" fill="hsl(142, 71%, 35%)" name="Operational" />
-                      <Bar dataKey="defective" stackId="a" fill="hsl(0, 72%, 51%)" name="Defective" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                {/* Recent Active Reports */}
+                <div className="rounded-xl border bg-card p-5 lg:col-span-2">
+                  <h3 className="font-display font-semibold text-foreground mb-4">Recent Fault Reports</h3>
+                  <div className="space-y-3">
+                    {poles.flatMap(p => p.reports.map(r => ({ ...r, zone: p.zone }))).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5).map((r) => (
+                      <div key={r.id} className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
+                        <div className="w-9 h-9 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+                          <AlertTriangle className="w-4 h-4 text-destructive" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{r.faultType} — <span className="font-mono">{r.poleId}</span></p>
+                          <p className="text-xs text-muted-foreground">{r.zone} • {format(new Date(r.timestamp), "MMM d, h:mm a")}</p>
+                        </div>
+                        <Badge variant="outline" className="shrink-0 text-xs">{r.severity}</Badge>
+                      </div>
+                    ))}
+                    {totalReports === 0 && <p className="text-sm text-muted-foreground text-center py-6">No reports yet</p>}
+                  </div>
                 </div>
               </div>
+            </TabsContent>
 
-              {/* Recent Active Reports */}
-              <div className="rounded-xl border bg-card p-5 lg:col-span-2">
-                <h3 className="font-display font-semibold text-foreground mb-4">Recent Fault Reports</h3>
-                <div className="space-y-3">
-                  {poles.flatMap(p => p.reports.map(r => ({ ...r, zone: p.zone }))).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5).map((r) => (
-                    <div key={r.id} className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
-                      <div className="w-9 h-9 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
-                        <AlertTriangle className="w-4 h-4 text-destructive" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{r.faultType} — <span className="font-mono">{r.poleId}</span></p>
-                        <p className="text-xs text-muted-foreground">{r.zone} • {format(new Date(r.timestamp), "MMM d, h:mm a")}</p>
-                      </div>
-                      <Badge variant="outline" className="shrink-0 text-xs">{r.severity}</Badge>
-                    </div>
-                  ))}
-                  {totalReports === 0 && <p className="text-sm text-muted-foreground text-center py-6">No reports yet</p>}
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="qr">
-            <QRGenerator />
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="qr">
+              <QRGenerator />
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
 
       <PoleDrawer pole={selectedPole} open={drawerOpen} onClose={() => setDrawerOpen(false)} />

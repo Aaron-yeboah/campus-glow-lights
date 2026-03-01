@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { usePoles } from "@/context/PoleContext";
+import LoadingScreen from "@/components/LoadingScreen";
 import { toast } from "sonner";
 import ugLogo from "@/assets/ug-logo.png";
 
@@ -82,6 +83,10 @@ const Report = () => {
     }
   };
 
+  if (submitting) {
+    return <LoadingScreen message="Syncing with Supabase..." fullScreen />;
+  }
+
   if (submitted) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -129,10 +134,7 @@ const Report = () => {
 
       <div className="max-w-lg mx-auto p-4 space-y-4 pb-12">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-32 space-y-4">
-            <ShieldAlert className="w-12 h-12 text-primary/30 animate-pulse" />
-            <p className="text-muted-foreground font-medium text-sm">Verifying Streetlight ID...</p>
-          </div>
+          <LoadingScreen message="Verifying Streetlight ID..." />
         ) : !poleId ? (
           <div className="rounded-2xl border-2 border-dashed border-muted p-12 text-center space-y-4 bg-background">
             <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto">
