@@ -11,6 +11,7 @@ import { usePoles, type Pole } from "@/context/PoleContext";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import LoadingScreen from "@/components/LoadingScreen";
+import { compressImage } from "@/lib/image-utils";
 
 import {
     Dialog,
@@ -129,13 +130,16 @@ const MaintenanceDashboard = () => {
             reader.onloadend = async () => {
                 const base64Photo = reader.result as string;
                 try {
-                    await startRepair(startingPoleId, base64Photo);
+                    const compToast = toast.loading("Compressing photo for sync...");
+                    const compressed = await compressImage(base64Photo);
+                    await startRepair(startingPoleId, compressed);
+                    toast.dismiss(compToast);
                     toast.success(`Work started on ${startingPoleId}`, {
-                        description: "Status updated to 'In Progress' with Before Photo.",
+                        description: "Status updated to 'In Progress' with Optimized Photo.",
                         className: "bg-[#1A365D] text-white border-none shadow-xl"
                     });
                 } catch (error) {
-                    toast.error("Failed to sync status.");
+                    toast.error("Failed to process photo.");
                 } finally {
                     setStartingPoleId(null);
                 }

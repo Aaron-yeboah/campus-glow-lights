@@ -17,6 +17,7 @@ import { usePoles } from "@/context/PoleContext";
 import LoadingScreen from "@/components/LoadingScreen";
 import { toast } from "sonner";
 import ugLogo from "@/assets/ug-logo.png";
+import { compressImage } from "@/lib/image-utils";
 
 const faultTypes = [
   "Flickering",
@@ -57,12 +58,21 @@ const Report = () => {
   const handleCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        toast.error("Photo is too large. Please take a smaller photo.");
-        return;
-      }
       const reader = new FileReader();
-      reader.onloadend = () => setPhoto(reader.result as string);
+      reader.onloadend = async () => {
+        const base64 = reader.result as string;
+        try {
+          // Add a loading toast for the compression if it's potentially slow
+          const compToast = toast.loading("Optimizing high-res photo...");
+          const compressed = await compressImage(base64);
+          setPhoto(compressed);
+          toast.dismiss(compToast);
+        } catch (error) {
+          console.error("Compression failed:", error);
+          setPhoto(base64); // Fallback to original
+          toast.error("Failed to fully optimize photo, using original.");
+        }
+      };
       reader.readAsDataURL(file);
     }
   };

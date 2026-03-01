@@ -6,6 +6,8 @@ import { MapPin, Clock, AlertTriangle, Calendar, ShieldAlert, FileText, Phone } 
 import { Pole, usePoles } from "@/context/PoleContext";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import LoadingScreen from "./LoadingScreen";
+import { useState } from "react";
 
 interface PoleDrawerProps {
   pole: Pole | null;
@@ -21,7 +23,9 @@ const severityColor: Record<string, string> = {
 };
 
 const PoleDrawer = ({ pole, open, onClose }: PoleDrawerProps) => {
-  const { markRepaired } = usePoles();
+  const { markRepaired, fetchReportPhoto } = usePoles();
+  const [fetchingPhoto, setFetchingPhoto] = useState(false);
+  const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
 
   if (!pole) return null;
 
@@ -116,8 +120,35 @@ const PoleDrawer = ({ pole, open, onClose }: PoleDrawerProps) => {
                         <p>{r.contactInfo}</p>
                       </div>
                     )}
-                    {r.photoUrl && (
-                      <img src={r.photoUrl} alt="Fault" className="w-full h-32 object-cover rounded-md" />
+                    {r.photoUrl ? (
+                      <div
+                        className="relative group cursor-pointer overflow-hidden rounded-md"
+                        onClick={async () => {
+                          setFetchingPhoto(true);
+                          try {
+                            // Even if we have it, we fulfill the request to "fetch from supabase" with the loading screen
+                            const url = await fetchReportPhoto(r.id);
+                            if (url) {
+                              setViewingPhoto(url);
+                            } else {
+                              toast.error("Could not retrieve photo");
+                            }
+                          } catch (e) {
+                            toast.error("Error fetching photo");
+                          } finally {
+                            setFetchingPhoto(false);
+                          }
+                        }}
+                      >
+                        <img src={r.photoUrl} alt="Fault" className="w-full h-32 object-cover transition-transform group-hover:scale-105" />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span className="text-white text-[10px] font-bold uppercase tracking-widest bg-primary/80 px-3 py-1.5 rounded-full">Click to Enlargen</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="py-4 text-center border-2 border-dashed rounded-md bg-muted/20">
+                        <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">No evidence photo provided</p>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -125,6 +156,28 @@ const PoleDrawer = ({ pole, open, onClose }: PoleDrawerProps) => {
             )}
           </div>
         </div>
+
+        {/* Translucent Loading Overlay */}
+        {fetchingPhoto && <LoadingScreen message="Retrieving Evidence..." translucent />}
+
+        {/* Photo Lightbox */}
+        {viewingPhoto && (
+          <div
+            className="fixed inset-0 bg-black/90 z-[110] flex items-center justify-center p-4 cursor-zoom-out animate-in fade-in duration-300"
+            onClick={() => setViewingPhoto(null)}
+          >
+            <div className="relative max-w-4xl w-full h-full flex flex-col justify-center gap-4">
+              <img
+                src={viewingPhoto}
+                className="max-h-[80vh] w-auto mx-auto object-contain rounded-xl shadow-2xl animate-in zoom-in-95 duration-300"
+                alt="Fault Detail"
+              />
+              <div className="text-center">
+                <p className="text-white/60 text-xs font-bold uppercase tracking-[0.2em]">Click anywhere to close</p>
+              </div>
+            </div>
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );

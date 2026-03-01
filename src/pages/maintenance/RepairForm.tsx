@@ -15,6 +15,7 @@ import { usePoles } from "@/context/PoleContext";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import LoadingScreen from "@/components/LoadingScreen";
+import { compressImage } from "@/lib/image-utils";
 
 const faultTypes = [
     "Flickering",
@@ -36,12 +37,19 @@ const ImageUploader = ({ label, id, photo, setPhoto, readOnly = false }: { label
         if (readOnly) return;
         const file = e.target.files?.[0];
         if (file) {
-            if (file.size > 10 * 1024 * 1024) {
-                toast.error("Photo is too large. Please take a smaller photo.");
-                return;
-            }
             const reader = new FileReader();
-            reader.onloadend = () => setPhoto(reader.result as string);
+            reader.onloadend = async () => {
+                const base64 = reader.result as string;
+                try {
+                    const compToast = toast.loading("Optimizing photo...");
+                    const compressed = await compressImage(base64);
+                    setPhoto(compressed);
+                    toast.dismiss(compToast);
+                } catch (error) {
+                    toast.error("Process error, using original.");
+                    setPhoto(base64);
+                }
+            };
             reader.readAsDataURL(file);
         }
     };

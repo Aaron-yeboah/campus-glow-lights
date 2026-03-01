@@ -67,7 +67,7 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
         .from("poles")
         .select(`
           id, zone, status, days_outage, last_inspected, install_date,
-          reports (id, pole_id, fault_type, severity, description, timestamp, reported_by, contact_info)
+          reports (id, pole_id, fault_type, severity, description, timestamp, reported_by, contact_info, photo_url)
         `);
 
       if (polesError) throw polesError;
