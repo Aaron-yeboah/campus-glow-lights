@@ -13,10 +13,13 @@ import LoadingScreen from "@/components/LoadingScreen";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import ugLogo from "@/assets/ug-logo.png";
+import { generateReceiptHtml } from "@/lib/receipt-utils";
 
 const MaintenanceHistory = () => {
     const { repairs, loadingRepairs, fetchRepairPhotos, deleteRepair } = usePoles();
     const [search, setSearch] = useState("");
+    const [processingReceipt, setProcessingReceipt] = useState(false);
 
     const filteredFixes = useMemo(() => {
         return repairs.filter((f) =>
@@ -88,15 +91,32 @@ const MaintenanceHistory = () => {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="h-8 text-[10px] font-bold uppercase"
+                                                className="h-8 text-[10px] font-bold uppercase transition-all active:scale-95"
                                                 onClick={async () => {
-                                                    const loadingToast = toast.loading("Processing...");
-                                                    const photos = await fetchRepairPhotos(f.id);
-                                                    toast.dismiss(loadingToast);
-                                                    if (photos) {
-                                                        const win = window.open("", "_blank");
-                                                        win?.document.write(`<html><body style="background:#0f172a;color:white;padding:20px;font-family:sans-serif;"><h2>${f.poleId} Receipt</h2><img src="${photos.before}" style="width:45%;"/><img src="${photos.after}" style="width:45%; margin-left:5%;"/></body></html>`);
-                                                        win?.document.close();
+                                                    setProcessingReceipt(true);
+                                                    try {
+                                                        const photos = await fetchRepairPhotos(f.id);
+                                                        if (photos) {
+                                                            const win = window.open("", "_blank");
+                                                            const html = generateReceiptHtml({
+                                                                poleId: f.poleId,
+                                                                techName: f.techName,
+                                                                faultCategory: f.faultCategory,
+                                                                timestamp: format(new Date(f.timestamp), "MMM dd, yyyy @ h:mm a"),
+                                                                beforePhoto: photos.before,
+                                                                afterPhoto: photos.after,
+                                                                workNotes: f.workNotes,
+                                                                ugLogo: ugLogo
+                                                            });
+                                                            win?.document.write(html);
+                                                            win?.document.close();
+                                                        } else {
+                                                            toast.error("Documentation not found.");
+                                                        }
+                                                    } catch (e) {
+                                                        toast.error("Error generating receipt.");
+                                                    } finally {
+                                                        setProcessingReceipt(false);
                                                     }
                                                 }}
                                             >
@@ -147,17 +167,32 @@ const MaintenanceHistory = () => {
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        className="h-8 text-[10px] font-black uppercase tracking-widest px-4"
+                                        className="h-8 text-[10px] font-black uppercase tracking-widest px-4 transition-all active:scale-95"
                                         onClick={async () => {
-                                            const loadingToast = toast.loading("Processing...");
-                                            const photos = await fetchRepairPhotos(f.id);
-                                            toast.dismiss(loadingToast);
-                                            if (photos) {
-                                                const win = window.open("", "_blank");
-                                                if (win) {
-                                                    win.document.write(`<html><body style="background:#0f172a;color:white;padding:20px;font-family:sans-serif;"><h2>${f.poleId} Receipt</h2><img src="${photos.before}" style="width:100%;"/><img src="${photos.after}" style="width:100%;margin-top:20px;"/></body></html>`);
-                                                    win.document.close();
+                                            setProcessingReceipt(true);
+                                            try {
+                                                const photos = await fetchRepairPhotos(f.id);
+                                                if (photos) {
+                                                    const win = window.open("", "_blank");
+                                                    const html = generateReceiptHtml({
+                                                        poleId: f.poleId,
+                                                        techName: f.techName,
+                                                        faultCategory: f.faultCategory,
+                                                        timestamp: format(new Date(f.timestamp), "MMM dd, yyyy @ h:mm a"),
+                                                        beforePhoto: photos.before,
+                                                        afterPhoto: photos.after,
+                                                        workNotes: f.workNotes,
+                                                        ugLogo: ugLogo
+                                                    });
+                                                    win?.document.write(html);
+                                                    win?.document.close();
+                                                } else {
+                                                    toast.error("Photos missing");
                                                 }
+                                            } catch (e) {
+                                                toast.error("Error");
+                                            } finally {
+                                                setProcessingReceipt(false);
                                             }
                                         }}
                                     >
@@ -233,6 +268,7 @@ const MaintenanceHistory = () => {
                     <Download className="w-3.5 h-3.5 ml-2" />
                 </Button>
             </div>
+            {processingReceipt && <LoadingScreen message="Retrieving Documentation..." translucent />}
         </div >
     );
 };

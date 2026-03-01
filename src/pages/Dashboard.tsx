@@ -30,6 +30,7 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { generateReceiptHtml } from "@/lib/receipt-utils";
 
 const Dashboard = () => {
   const { poles, loading, loadingRepairs, deletePole, repairs, deleteRepair, fetchRepairPhotos } = usePoles();
@@ -39,6 +40,7 @@ const Dashboard = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("id");
+  const [processingReceipt, setProcessingReceipt] = useState(false);
 
   // Get active tab from URL or default to "dashboard"
   const activeTab = searchParams.get("tab") || "dashboard";
@@ -605,15 +607,30 @@ const Dashboard = () => {
                               <Button
                                 variant="outline" size="sm" className="h-8 text-[10px] font-bold"
                                 onClick={async () => {
-                                  const loadingToast = toast.loading("Fetching documentation...");
-                                  const photos = await fetchRepairPhotos(repair.id);
-                                  toast.dismiss(loadingToast);
-                                  if (photos) {
-                                    const win = window.open("", "_blank");
-                                    win?.document.write(`<html><body style="background:#0f172a;color:white;padding:40px;font-family:sans-serif;"><h2>${repair.poleId} Documentation</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;"><img src="${photos.before}" style="width:100%; border-radius:10px;"/><img src="${photos.after}" style="width:100%; border-radius:10px;"/></div></body></html>`);
-                                    win?.document.close();
-                                  } else {
-                                    toast.error("No photos found.");
+                                  setProcessingReceipt(true);
+                                  try {
+                                    const photos = await fetchRepairPhotos(repair.id);
+                                    if (photos) {
+                                      const win = window.open("", "_blank");
+                                      const html = generateReceiptHtml({
+                                        poleId: repair.poleId,
+                                        techName: repair.techName,
+                                        faultCategory: repair.faultCategory,
+                                        timestamp: format(new Date(repair.timestamp), "MMM dd, yyyy @ h:mm a"),
+                                        beforePhoto: photos.before,
+                                        afterPhoto: photos.after,
+                                        workNotes: repair.workNotes,
+                                        ugLogo: ugLogo
+                                      });
+                                      win?.document.write(html);
+                                      win?.document.close();
+                                    } else {
+                                      toast.error("No documentation found.");
+                                    }
+                                  } catch (e) {
+                                    toast.error("Error generating receipt.");
+                                  } finally {
+                                    setProcessingReceipt(false);
                                   }
                                 }}
                               >Receipt</Button>
@@ -660,15 +677,32 @@ const Dashboard = () => {
                         </div>
                         <div className="flex gap-2">
                           <Button
-                            variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase tracking-widest px-3"
+                            variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase tracking-widest px-3 transition-all active:scale-95"
                             onClick={async () => {
-                              const loadingToast = toast.loading("Processing...");
-                              const photos = await fetchRepairPhotos(repair.id);
-                              toast.dismiss(loadingToast);
-                              if (photos) {
-                                const win = window.open("", "_blank");
-                                win?.document.write(`<html><body style="background:#0f172a;color:white;padding:20px;"><h2>Receipt: ${repair.poleId}</h2><img src="${photos.before}" style="width:100%;"/><img src="${photos.after}" style="width:100%;margin-top:20px;"/></body></html>`);
-                                win?.document.close();
+                              setProcessingReceipt(true);
+                              try {
+                                const photos = await fetchRepairPhotos(repair.id);
+                                if (photos) {
+                                  const win = window.open("", "_blank");
+                                  const html = generateReceiptHtml({
+                                    poleId: repair.poleId,
+                                    techName: repair.techName,
+                                    faultCategory: repair.faultCategory,
+                                    timestamp: format(new Date(repair.timestamp), "MMM dd, yyyy @ h:mm a"),
+                                    beforePhoto: photos.before,
+                                    afterPhoto: photos.after,
+                                    workNotes: repair.workNotes,
+                                    ugLogo: ugLogo
+                                  });
+                                  win?.document.write(html);
+                                  win?.document.close();
+                                } else {
+                                  toast.error("Photos missing");
+                                }
+                              } catch (e) {
+                                toast.error("Error");
+                              } finally {
+                                setProcessingReceipt(false);
                               }
                             }}
                           >Receipt</Button>
@@ -701,6 +735,7 @@ const Dashboard = () => {
       </div>
 
       <PoleDrawer pole={selectedPole} open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      {processingReceipt && <LoadingScreen message="Retrieving Documentation..." translucent />}
     </div>
   );
 };
