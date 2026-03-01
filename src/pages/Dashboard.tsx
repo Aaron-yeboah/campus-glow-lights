@@ -28,9 +28,11 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const Dashboard = () => {
-  const { poles, loading, deletePole, repairs, deleteRepair, fetchRepairPhotos } = usePoles();
+  const { poles, loading, loadingRepairs, deletePole, repairs, deleteRepair, fetchRepairPhotos } = usePoles();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [selectedPole, setSelectedPole] = useState<Pole | null>(null);
@@ -95,78 +97,136 @@ const Dashboard = () => {
     return result;
   }, [poles, search, statusFilter, sortBy]);
 
-  const downloadFullReport = () => {
+  const generatePDFReport = () => {
     try {
-      // Prepare Poles Data
-      const polesSheetData = poles.map(p => ({
-        "Pole ID": p.id,
-        "Zone": p.zone,
-        "Status": p.status,
-        "Days Outage": p.daysOutage,
-        "Last Inspected": format(new Date(p.lastInspected), "yyyy-MM-dd HH:mm"),
-        "Install Date": format(new Date(p.installDate), "yyyy-MM-dd"),
-        "Total Reports": p.reports.length
-      }));
+      const doc = new jsPDF();
+      const timestamp = format(new Date(), "PPpp");
 
-      // Prepare Fault Reports Data
-      const reportsSheetData = poles.flatMap(p => p.reports.map(r => ({
-        "Report ID": r.id,
-        "Pole ID": r.poleId,
-        "Fault Type": r.faultType,
-        "Severity": r.severity,
-        "Description": r.description,
-        "Timestamp": format(new Date(r.timestamp), "yyyy-MM-dd HH:mm"),
-        "Reported By": r.reportedBy,
-        "Contact Info": r.contactInfo
-      })));
+      // Add Logo/Header
+      doc.setFillColor(26, 54, 93); // #1A365D Primary Color
+      doc.rect(0, 0, 210, 45, "F");
 
-      // Prepare Repairs Data
-      const repairsSheetData = repairs.map(r => ({
-        "Repair ID": r.id,
-        "Pole ID": r.poleId,
-        "Technician": r.techName,
-        "Fault Category": r.faultCategory,
-        "Work Notes": r.workNotes,
-        "Status": r.status,
-        "Timestamp": format(new Date(r.timestamp), "yyyy-MM-dd HH:mm")
-      }));
+      // Brand Title
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.setFont("helvetica", "bold");
+      doc.text("UNIVERSITY OF GHANA", 105, 20, { align: "center" });
+      doc.setFontSize(14);
+      doc.text("CAMPUS GLOW: STREETLIGHT ASSESSMENT REPORT", 105, 30, { align: "center" });
 
-      // Prepare Summary Data
-      const summaryData = [
-        { "Category": "System Overview", "Metric": "Total Streetlights", "Value": poles.length },
-        { "Category": "System Overview", "Metric": "Operational", "Value": operational },
-        { "Category": "System Overview", "Metric": "Defective", "Value": activeFaults },
-        { "Category": "System Overview", "Metric": "System Health Score", "Value": `${healthPercent}%` },
-        { "Category": "Analytics", "Metric": "Total Faults Reported (All Time)", "Value": totalReports },
-        { "Category": "Analytics", "Metric": "Total Successful Repairs", "Value": totalRepairs },
-        { "Category": "Analytics", "Metric": "Average Outage Duration", "Value": `${avgOutage} Days` },
-        { "Category": "Analytics", "Metric": "Critical Faults (5+ Days)", "Value": criticalFaults }
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(200, 200, 200);
+      doc.text(`Official System Generated Document · ${timestamp}`, 105, 38, { align: "center" });
+
+      // Section 1: Executive Summary
+      doc.setTextColor(26, 54, 93);
+      doc.setFontSize(16);
+      doc.text("EXECUTIVE SUMMARY", 15, 60);
+      doc.setDrawColor(26, 54, 93);
+      doc.setLineWidth(0.5);
+      doc.line(15, 63, 75, 63);
+
+      // Summary Cards (drawn manually)
+      const stats = [
+        { label: "Active Faults", value: activeFaults.toString() },
+        { label: "Operational", value: operational.toString() },
+        { label: "System Health", value: `${healthPercent}%` },
+        { label: "Total Repairs", value: totalRepairs.toString() }
       ];
 
-      // Create Workbook
-      const wb = XLSX.utils.book_new();
+      stats.forEach((stat, i) => {
+        const x = 15 + (i * 48);
+        doc.setFillColor(248, 250, 252); // slate-50
+        doc.roundedRect(x, 70, 42, 25, 3, 3, "F");
+        doc.setDrawColor(226, 232, 240); // slate-200
+        doc.roundedRect(x, 70, 42, 25, 3, 3, "S");
 
-      const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(wb, wsSummary, "Dashboard Summary");
+        doc.setTextColor(100, 116, 139); // slate-500
+        doc.setFontSize(8);
+        doc.text(stat.label.toUpperCase(), x + 21, 80, { align: "center" });
 
-      const wsPoles = XLSX.utils.json_to_sheet(polesSheetData);
-      XLSX.utils.book_append_sheet(wb, wsPoles, "Streetlights Inventory");
+        doc.setTextColor(26, 54, 93);
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text(stat.value, x + 21, 88, { align: "center" });
+      });
 
-      const wsReports = XLSX.utils.json_to_sheet(reportsSheetData);
-      XLSX.utils.book_append_sheet(wb, wsReports, "Active Fault Reports");
+      // Section 2: Defective Poles (Priority)
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text("DEFECTIVE UNIT ANALYSIS", 15, 115);
+      doc.line(15, 118, 90, 118);
 
-      const wsRepairs = XLSX.utils.json_to_sheet(repairsSheetData);
-      XLSX.utils.book_append_sheet(wb, wsRepairs, "Maintenance History");
+      const defectiveData = poles
+        .filter(p => p.status === "Defective")
+        .sort((a, b) => b.daysOutage - a.daysOutage)
+        .slice(0, 15)
+        .map(p => [
+          p.id,
+          p.zone,
+          `${p.daysOutage} Days`,
+          p.reports[0]?.faultType || "Power Failure",
+          p.reports[0]?.severity || "Medium"
+        ]);
 
-      // Generate Excel file
-      const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-      const data = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8" });
+      autoTable(doc, {
+        startY: 125,
+        head: [['POLE ID', 'ZONE/LOCATION', 'OUTAGE', 'ISSUE CATEGORY', 'SEVERITY']],
+        body: defectiveData,
+        headStyles: { fillColor: [26, 54, 93], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+        bodyStyles: { textColor: [30, 41, 59] },
+        alternateRowStyles: { fillColor: [249, 251, 253] },
+        styles: { fontSize: 9, cellPadding: 5 },
+        columnStyles: {
+          0: { fontStyle: 'bold' },
+          2: { halign: 'center' },
+          4: { fontStyle: 'bold', halign: 'center' }
+        }
+      });
 
-      saveAs(data, `Campus_Glow_Full_Report_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
-      toast.success("Comprehensive report generated and downloaded");
+      // Section 3: Recent Maintenance
+      const finalY = (doc as any).lastAutoTable.finalY + 20;
+
+      if (finalY < 230) {
+        doc.setFontSize(16);
+        doc.text("RECENT MAINTENANCE TASKS", 15, finalY);
+        doc.line(15, finalY + 3, 95, finalY + 3);
+
+        const repairData = repairs.slice(0, 10).map(r => [
+          format(new Date(r.timestamp), "MMM dd, yyyy"),
+          r.poleId,
+          r.techName,
+          r.faultCategory
+        ]);
+
+        autoTable(doc, {
+          startY: finalY + 10,
+          head: [['COMPLETION DATE', 'POLE ID', 'ASSIGNED TECHNICIAN', 'REPAIR CATEGORY']],
+          body: repairData,
+          headStyles: { fillColor: [51, 65, 85], textColor: [255, 255, 255] },
+          styles: { fontSize: 8, cellPadding: 4 }
+        });
+      }
+
+      // Final Branding Footer
+      const pageCount = (doc as any).internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setDrawColor(226, 232, 240);
+        doc.line(15, 280, 195, 280);
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "italic");
+        doc.setTextColor(148, 163, 184);
+        doc.text("University of Ghana · Electronic Maintenance & Logistics Dept · Campus Glow Project", 105, 287, { align: "center" });
+        doc.text(`Page ${i} of ${pageCount}`, 195, 287, { align: "right" });
+      }
+
+      doc.save(`UG_Campus_Glow_Report_${format(new Date(), "yyyy-MM-dd")}.pdf`);
+      toast.success("Professional Assessment Report generated as PDF");
     } catch (error) {
-      console.error("Report generation failed:", error);
-      toast.error("Failed to generate report");
+      console.error("PDF generation failed:", error);
+      toast.error("Cloud PDF generation failed. Please try again.");
     }
   };
 
@@ -201,36 +261,40 @@ const Dashboard = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {loading ? (
-          <LoadingScreen message="Syncing with Supabase..." />
+        {loading || loadingRepairs ? (
+          <LoadingScreen message="Syncing with Supabase..." fullScreen />
         ) : (
-          <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-              <TabsList>
-                <TabsTrigger value="dashboard">
-                  <LayoutDashboard className="w-4 h-4 mr-1.5" /> Dashboard
-                </TabsTrigger>
-                <TabsTrigger value="analytics">
-                  <BarChart3 className="w-4 h-4 mr-1.5" /> Analytics
-                </TabsTrigger>
-                <TabsTrigger value="qr">
-                  <QrCode className="w-4 h-4 mr-1.5" /> QR Management
-                </TabsTrigger>
-                <TabsTrigger value="maintenance">
-                  <HistoryIcon className="w-4 h-4 mr-1.5" /> Maintenance
-                </TabsTrigger>
-              </TabsList>
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+              <div className="w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0 scrollbar-hide">
+                <TabsList className="inline-flex w-max lg:w-auto h-11 p-1 bg-muted/50 rounded-xl">
+                  <TabsTrigger value="dashboard" className="rounded-lg px-4 py-2 transition-all data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                    <LayoutDashboard className="w-4 h-4 mr-2" /> <span className="text-sm">Dashboard</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="analytics" className="rounded-lg px-4 py-2 transition-all data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                    <BarChart3 className="w-4 h-4 mr-2" /> <span className="text-sm">Analytics</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="qr" className="rounded-lg px-4 py-2 transition-all data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                    <QrCode className="w-4 h-4 mr-2" /> <span className="text-sm">QR Management</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="maintenance" className="rounded-lg px-4 py-2 transition-all data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                    <HistoryIcon className="w-4 h-4 mr-2" /> <span className="text-sm">Maintenance</span>
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex w-full lg:w-auto flex-wrap items-center gap-2">
                 <Button
-                  onClick={downloadFullReport}
+                  onClick={generatePDFReport}
                   variant="outline"
-                  className="bg-[#1A365D] hover:bg-[#1A365D]/90 text-white font-bold h-10 px-4 rounded-lg shadow-sm gap-2 border-none"
+                  className="flex-1 lg:flex-none justify-center bg-[#1A365D] hover:bg-[#1A365D]/90 text-white font-bold h-10 px-4 rounded-lg shadow-sm gap-2 border-none whitespace-nowrap"
                 >
                   <FileText className="w-4 h-4" />
-                  Download Overview Report
+                  <span className="text-xs">Export PDF</span>
                 </Button>
-                <AddPoleModal />
+                <div className="flex-1 lg:flex-none">
+                  <AddPoleModal />
+                </div>
               </div>
             </div>
 
@@ -515,125 +579,126 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                <div className="overflow-x-auto">
+                {/* Desktop View */}
+                <div className="hidden md:block overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date</th>
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Technician</th>
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pole ID</th>
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fault Category</th>
-                        <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Documentation</th>
+                      <tr className="border-b bg-muted/50 text-[10px] uppercase font-bold text-muted-foreground">
+                        <th className="text-left px-6 py-4">Date/Time</th>
+                        <th className="text-left px-6 py-4">Technician</th>
+                        <th className="text-left px-6 py-4">Pole ID</th>
+                        <th className="text-left px-6 py-4">Status</th>
+                        <th className="text-right px-6 py-4">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {repairs.length > 0 ? (
-                        repairs.filter((r) =>
-                          r.poleId.toLowerCase().includes(search.toLowerCase()) ||
-                          r.techName.toLowerCase().includes(search.toLowerCase()) ||
-                          r.faultCategory.toLowerCase().includes(search.toLowerCase())
-                        ).map((repair) => (
-                          <tr key={repair.id} className="hover:bg-muted/30 transition-colors">
-                            <td className="px-4 py-3 text-xs">
-                              {format(new Date(repair.timestamp), "MMM dd, yyyy")}
-                              <br />
-                              <span className="text-muted-foreground">{format(new Date(repair.timestamp), "h:mm a")}</span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">
-                                  {repair.techName.split(' ').map((n) => n[0]).join('')}
-                                </div>
-                                <span className="text-sm font-medium">{repair.techName}</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 font-mono font-semibold text-sm">{repair.poleId}</td>
-                            <td className="px-4 py-3">
-                              <Badge variant="outline">{repair.faultCategory}</Badge>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-xs font-bold gap-2"
-                                  onClick={async () => {
-                                    const loadingToast = toast.loading("Fetching repair evidence...");
-                                    const photos = await fetchRepairPhotos(repair.id);
-                                    toast.dismiss(loadingToast);
-
-                                    if (photos) {
-                                      const win = window.open("", "_blank");
-                                      if (win) {
-                                        win.document.write(`
-                                      <html>
-                                        <head><title>Receipt - ${repair.poleId}</title></head>
-                                        <body style="margin:0; background:#0f172a; display:flex; flex-direction:column; align-items:center; color:white; font-family:sans-serif; padding:40px;">
-                                          <h1 style="margin-bottom:10px;">Maintenance Receipt: ${repair.poleId}</h1>
-                                          <p style="color:rgba(255,255,255,0.6); margin-bottom:30px;">Digitally signed by administrator for University of Ghana</p>
-                                          
-                                          <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px; width:100%; max-width:1100px;">
-                                            <div style="background:rgba(255,255,255,0.03); padding:20px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);">
-                                              <p style="font-weight:bold; letter-spacing:2px; font-size:12px; color:rgba(255,255,255,0.4);">BEFORE REPAIR</p>
-                                              <img src="${photos.before || ""}" style="width:100%; height:400px; object-fit:cover; border-radius:12px; margin-top:10px;"/>
-                                            </div>
-                                            <div style="background:rgba(255,255,255,0.03); padding:20px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);">
-                                              <p style="font-weight:bold; letter-spacing:2px; font-size:12px; color:rgba(255,255,255,0.4);">AFTER REPAIR</p>
-                                              <img src="${photos.after || ""}" style="width:100%; height:400px; object-fit:cover; border-radius:12px; margin-top:10px;"/>
-                                            </div>
-                                          </div>
-
-                                          <div style="margin-top:40px; width:100%; max-width:1100px; display:grid; grid-template-columns:1fr 1fr; gap:40px;">
-                                            <div style="background:rgba(255,255,255,0.05); padding:30px; border-radius:20px;">
-                                              <h3 style="margin-top:0; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px;">Repair Details</h3>
-                                              <p><b>Pole ID:</b> ${repair.poleId}</p>
-                                              <p><b>Fixed By:</b> ${repair.techName}</p>
-                                              <p><b>Category:</b> ${repair.faultCategory}</p>
-                                              <p><b>Date:</b> ${new Date(repair.timestamp).toLocaleString()}</p>
-                                            </div>
-                                            <div style="background:rgba(255,255,255,0.05); padding:30px; border-radius:20px;">
-                                              <h3 style="margin-top:0; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px;">Work Notes</h3>
-                                              <p style="line-height:1.6; color:rgba(255,255,255,0.8);">${repair.workNotes || "No specific notes recorded for this action."}</p>
-                                            </div>
-                                          </div>
-                                        </body>
-                                      </html>
-                                    `);
-                                        win.document.close();
-                                      }
-                                    } else {
-                                      toast.error("Failed to load photos.");
+                      {repairs.filter(r =>
+                        r.poleId.toLowerCase().includes(search.toLowerCase()) ||
+                        r.techName.toLowerCase().includes(search.toLowerCase())
+                      ).map((repair) => (
+                        <tr key={repair.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="px-6 py-4 text-xs font-medium">
+                            {format(new Date(repair.timestamp), "MMM dd, yyyy")}
+                            <div className="text-[10px] text-muted-foreground">{format(new Date(repair.timestamp), "h:mm a")}</div>
+                          </td>
+                          <td className="px-6 py-4 text-xs font-bold">{repair.techName}</td>
+                          <td className="px-6 py-4 text-xs font-mono font-bold">{repair.poleId}</td>
+                          <td className="px-6 py-4">
+                            <Badge variant="outline" className="text-[10px] uppercase">{repair.faultCategory}</Badge>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline" size="sm" className="h-8 text-[10px] font-bold"
+                                onClick={async () => {
+                                  const loadingToast = toast.loading("Fetching documentation...");
+                                  const photos = await fetchRepairPhotos(repair.id);
+                                  toast.dismiss(loadingToast);
+                                  if (photos) {
+                                    const win = window.open("", "_blank");
+                                    win?.document.write(`<html><body style="background:#0f172a;color:white;padding:40px;font-family:sans-serif;"><h2>${repair.poleId} Documentation</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;"><img src="${photos.before}" style="width:100%; border-radius:10px;"/><img src="${photos.after}" style="width:100%; border-radius:10px;"/></div></body></html>`);
+                                    win?.document.close();
+                                  } else {
+                                    toast.error("No photos found.");
+                                  }
+                                }}
+                              >Receipt</Button>
+                              <Button
+                                variant="ghost" size="sm" className="h-8 text-destructive hover:bg-destructive/10"
+                                onClick={async () => {
+                                  if (confirm("Delete this record permanently?")) {
+                                    try {
+                                      await deleteRepair(repair.id);
+                                      toast.success("Record removed");
+                                    } catch (e) {
+                                      toast.error("Failed to remove");
                                     }
-                                  }}
-                                >
-                                  <FileText className="w-3.5 h-3.5" />
-                                  View Evidence
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-destructive hover:bg-destructive/10"
-                                  onClick={() => {
-                                    if (confirm("Permanently delete this maintenance record?")) {
-                                      deleteRepair(repair.id)
-                                        .then(() => toast.success("Record removed"))
-                                        .catch(() => toast.error("Failed to delete record"));
-                                    }
-                                  }}
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))) : null}
+                                  }
+                                }}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
-                  {repairs.length === 0 && (
-                    <div className="py-20 text-center">
-                      <p className="text-muted-foreground text-sm">No maintenance records found.</p>
+                </div>
+
+                {/* Mobile View */}
+                <div className="md:hidden divide-y divide-border">
+                  {repairs.filter(r =>
+                    r.poleId.toLowerCase().includes(search.toLowerCase()) ||
+                    r.techName.toLowerCase().includes(search.toLowerCase())
+                  ).map((repair) => (
+                    <div key={repair.id} className="p-4 space-y-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-tight text-muted-foreground font-mono">{repair.poleId}</p>
+                          <p className="text-xs font-bold mt-0.5">{repair.techName}</p>
+                        </div>
+                        <Badge variant="secondary" className="text-[9px] font-bold uppercase">{repair.faultCategory}</Badge>
+                      </div>
+                      <div className="flex justify-between items-center bg-muted/20 p-3 rounded-xl border border-border/50">
+                        <div className="text-[10px] text-muted-foreground font-medium">
+                          {format(new Date(repair.timestamp), "MMM dd, yyyy · h:mm a")}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase tracking-widest px-3"
+                            onClick={async () => {
+                              const loadingToast = toast.loading("Processing...");
+                              const photos = await fetchRepairPhotos(repair.id);
+                              toast.dismiss(loadingToast);
+                              if (photos) {
+                                const win = window.open("", "_blank");
+                                win?.document.write(`<html><body style="background:#0f172a;color:white;padding:20px;"><h2>Receipt: ${repair.poleId}</h2><img src="${photos.before}" style="width:100%;"/><img src="${photos.after}" style="width:100%;margin-top:20px;"/></body></html>`);
+                                win?.document.close();
+                              }
+                            }}
+                          >Receipt</Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-destructive"
+                            onClick={async () => {
+                              if (confirm("Permanently delete?")) {
+                                try {
+                                  await deleteRepair(repair.id);
+                                  toast.success("Removed");
+                                } catch (e) {
+                                  toast.error("Error");
+                                }
+                              }
+                            }}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  )}
+                  ))}
                 </div>
               </div>
             </TabsContent>

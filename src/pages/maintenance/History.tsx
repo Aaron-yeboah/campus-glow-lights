@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import {
-    Search, FileText, ChevronRight, Download,
+    Search, FileText, ChevronRight, Download, Trash2,
     Calendar, User, Smartphone, History, Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
 const MaintenanceHistory = () => {
-    const { repairs, loadingRepairs, fetchRepairPhotos } = usePoles();
+    const { repairs, loadingRepairs, fetchRepairPhotos, deleteRepair } = usePoles();
     const [search, setSearch] = useState("");
 
     const filteredFixes = useMemo(() => {
@@ -57,8 +57,10 @@ const MaintenanceHistory = () => {
             </div>
 
             {/* Table Container */}
+            {/* Table/Cards Container */}
             <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
+                {/* Desktop View */}
+                <div className="hidden md:block overflow-x-auto overflow-y-auto max-h-[600px]">
                     <table className="w-full border-collapse">
                         <thead>
                             <tr className="bg-slate-50/50 border-b border-slate-100 sticky top-0 z-10">
@@ -72,77 +74,116 @@ const MaintenanceHistory = () => {
                         <tbody className="divide-y divide-slate-50">
                             {filteredFixes.map((f) => (
                                 <tr key={f.id} className="hover:bg-slate-50/50 transition-colors group">
-                                    <td className="px-6 py-4">
-                                        <div className="flex flex-col">
-                                            <span className="text-xs font-bold text-[#1A365D]">{format(f.timestamp, "MMM dd, yyyy")}</span>
-                                            <span className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
-                                                <Clock className="w-3 h-3" /> {format(f.timestamp, "h:mm a")}
-                                            </span>
-                                        </div>
+                                    <td className="px-6 py-4 text-xs font-bold text-[#1A365D]">
+                                        {format(f.timestamp, "MMM dd, yyyy")}
+                                        <div className="text-[10px] text-slate-400 font-medium">{format(f.timestamp, "h:mm a")}</div>
                                     </td>
+                                    <td className="px-6 py-4 text-xs font-bold text-slate-700">{f.techName}</td>
+                                    <td className="px-6 py-4 text-xs font-black text-[#1A365D]">{f.poleId}</td>
                                     <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-                                            <div className="w-7 h-7 bg-[#1A365D]/5 text-[#1A365D] rounded-full flex items-center justify-center text-[10px] border border-[#1A365D]/10">
-                                                {f.techName.split(' ').map(n => n[0]).join('')}
-                                            </div>
-                                            {f.techName}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className="text-xs font-black text-[#1A365D] tracking-tight">{f.poleId}</span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <Badge variant="secondary" className="bg-slate-100 text-slate-600 hover:bg-slate-100 border-none text-[10px] font-bold px-2 py-0.5">
-                                            {f.faultCategory}
-                                        </Badge>
+                                        <Badge variant="secondary" className="bg-slate-100 text-slate-600 text-[10px] font-bold">{f.faultCategory}</Badge>
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="h-9 border-slate-200 text-[#1A365D] hover:bg-slate-50 hover:text-[#1A365D] font-bold text-[10px] uppercase tracking-wide px-3"
-                                            onClick={async () => {
-                                                const loadingToast = toast.loading("Fetching repair evidence...");
-                                                const photos = await fetchRepairPhotos(f.id);
-                                                toast.dismiss(loadingToast);
-
-                                                if (photos?.after || photos?.before) {
-                                                    const win = window.open("", "_blank");
-                                                    win?.document.write(`
-                                                        <html>
-                                                            <body style="margin:0; background:#0f172a; display:flex; flex-direction:column; align-items:center; color:white; font-family:sans-serif; padding:20px;">
-                                                                <h2>Repair Receipt: ${f.poleId}</h2>
-                                                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; width:100%; max-width:1000px;">
-                                                                    <div>
-                                                                        <p>BEFORE</p>
-                                                                        <img src="${photos.before || ""}" style="width:100%; border-radius:10px;"/>
-                                                                    </div>
-                                                                    <div>
-                                                                        <p>AFTER</p>
-                                                                        <img src="${photos.after || ""}" style="width:100%; border-radius:10px;"/>
-                                                                    </div>
-                                                                </div>
-                                                                <div style="margin-top:20px; text-align:left; width:100%; max-width:1000px; background:rgba(255,255,255,0.05); padding:20px; border-radius:10px;">
-                                                                    <p><b>Technician:</b> ${f.techName}</p>
-                                                                    <p><b>Category:</b> ${f.faultCategory}</p>
-                                                                    <p><b>Notes:</b> ${f.workNotes || "No notes provided"}</p>
-                                                                </div>
-                                                            </body>
-                                                        </html>
-                                                    `);
-                                                } else {
-                                                    toast.error("No photos found for this record.");
-                                                }
-                                            }}
-                                        >
-                                            View Receipt
-                                            <FileText className="w-3.5 h-3.5 ml-1.5 opacity-60" />
-                                        </Button>
+                                        <div className="flex justify-end gap-2 text-right">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-8 text-[10px] font-bold uppercase"
+                                                onClick={async () => {
+                                                    const loadingToast = toast.loading("Processing...");
+                                                    const photos = await fetchRepairPhotos(f.id);
+                                                    toast.dismiss(loadingToast);
+                                                    if (photos) {
+                                                        const win = window.open("", "_blank");
+                                                        win?.document.write(`<html><body style="background:#0f172a;color:white;padding:20px;font-family:sans-serif;"><h2>${f.poleId} Receipt</h2><img src="${photos.before}" style="width:45%;"/><img src="${photos.after}" style="width:45%; margin-left:5%;"/></body></html>`);
+                                                        win?.document.close();
+                                                    }
+                                                }}
+                                            >
+                                                View
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 text-destructive hover:bg-destructive/10"
+                                                onClick={async () => {
+                                                    if (confirm("Permanently delete this repair record?")) {
+                                                        try {
+                                                            await deleteRepair(f.id);
+                                                            toast.success("Record removed.");
+                                                        } catch (e) {
+                                                            toast.error("Failed to remove.");
+                                                        }
+                                                    }
+                                                }}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Mobile View */}
+                <div className="md:hidden divide-y divide-slate-100">
+                    {filteredFixes.map((f) => (
+                        <div key={f.id} className="p-5 space-y-4">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{format(f.timestamp, "MMM dd, yyyy · h:mm a")}</p>
+                                    <h3 className="text-sm font-black text-[#1A365D] tracking-tight mt-0.5">{f.poleId}</h3>
+                                </div>
+                                <Badge variant="secondary" className="bg-slate-100 text-slate-600 text-[9px] font-bold uppercase">{f.faultCategory}</Badge>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 bg-[#1A365D]/5 text-[#1A365D] rounded-full flex items-center justify-center text-[9px] font-bold uppercase">{f.techName[0]}</div>
+                                    <span className="text-xs font-bold text-slate-600">{f.techName}</span>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 text-[10px] font-black uppercase tracking-widest px-4"
+                                        onClick={async () => {
+                                            const loadingToast = toast.loading("Processing...");
+                                            const photos = await fetchRepairPhotos(f.id);
+                                            toast.dismiss(loadingToast);
+                                            if (photos) {
+                                                const win = window.open("", "_blank");
+                                                if (win) {
+                                                    win.document.write(`<html><body style="background:#0f172a;color:white;padding:20px;font-family:sans-serif;"><h2>${f.poleId} Receipt</h2><img src="${photos.before}" style="width:100%;"/><img src="${photos.after}" style="width:100%;margin-top:20px;"/></body></html>`);
+                                                    win.document.close();
+                                                }
+                                            }
+                                        }}
+                                    >
+                                        Receipt
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 text-destructive"
+                                        onClick={async () => {
+                                            if (confirm("Delete permanently?")) {
+                                                try {
+                                                    await deleteRepair(f.id);
+                                                    toast.success("Removed");
+                                                } catch (e) {
+                                                    toast.error("Failed");
+                                                }
+                                            }
+                                        }}
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
 
                 {filteredFixes.length === 0 && (
@@ -192,7 +233,7 @@ const MaintenanceHistory = () => {
                     <Download className="w-3.5 h-3.5 ml-2" />
                 </Button>
             </div>
-        </div>
+        </div >
     );
 };
 
