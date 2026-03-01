@@ -233,27 +233,21 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-primary text-primary-foreground">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src={ugLogo} alt="UG Logo" className="w-9 h-9 object-contain" />
+      <header className="bg-[#1A365D] text-white border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <img src={ugLogo} alt="UG Logo" className="w-8 h-8 sm:w-9 sm:h-9 object-contain" />
             <div>
-              <h1 className="text-xl font-display font-bold">Campus Glow</h1>
-              <p className="text-xs opacity-75">University of Ghana — Streetlight Management</p>
+              <h1 className="text-lg sm:text-xl font-display font-bold leading-none">Campus Glow</h1>
+              <p className="hidden sm:block text-[10px] opacity-75 mt-0.5 font-medium uppercase tracking-wider">Streetlight Management</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 text-xs opacity-75 mr-2">
+            <div className="hidden md:flex items-center gap-2 text-[10px] opacity-75 font-bold uppercase tracking-widest mr-2">
               <Clock className="w-3.5 h-3.5" />
               {format(new Date(), "MMM d, yyyy h:mm a")}
             </div>
-            <Button asChild variant="ghost" size="sm" className="text-white hover:bg-white/10 rounded-full gap-2 px-3 h-8 text-xs font-bold">
-              <Link to="/faq">
-                <HelpCircle className="w-3.5 h-3.5" />
-                Support
-              </Link>
-            </Button>
-            <Badge variant="outline" className="border-primary-foreground/30 text-primary-foreground text-xs whitespace-nowrap">
+            <Badge variant="outline" className="bg-white/5 border-white/20 text-white text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 h-6">
               Admin Portal
             </Badge>
           </div>

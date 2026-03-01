@@ -37,8 +37,8 @@ const MaintenanceLayout = () => {
                             key={item.path}
                             to={item.path}
                             className={`flex items-center gap-4 px-6 py-4 rounded-xl text-sm font-bold transition-all ${activePath(item.path)
-                                    ? "bg-white text-[#1A365D] shadow-xl translate-x-1"
-                                    : "text-white/70 hover:bg-white/5 hover:text-white"
+                                ? "bg-white text-[#1A365D] shadow-xl translate-x-1"
+                                : "text-white/70 hover:bg-white/5 hover:text-white"
                                 }`}
                         >
                             <item.icon className={`w-5 h-5 ${activePath(item.path) ? "text-[#1A365D]" : "text-white/40"}`} />
@@ -74,15 +74,15 @@ const MaintenanceLayout = () => {
             </aside>
 
             {/* Mobile Top Header */}
-            <header className="md:hidden bg-[#1A365D] text-white p-5 flex items-center justify-between sticky top-0 z-50 border-b border-white/10">
-                <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-white/10 rounded-lg p-1.5">
+            <header className="md:hidden bg-[#1A365D] text-white p-3 px-4 flex items-center justify-between sticky top-0 z-50 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-white/10 rounded-lg p-1.5 flex items-center justify-center">
                         <img src={ugLogo} alt="UG Logo" className="w-full h-full object-contain" />
                     </div>
-                    <h1 className="text-sm font-black tracking-tight uppercase">Team Portal</h1>
+                    <h1 className="text-xs font-black tracking-tight uppercase">Portal</h1>
                 </div>
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-success/30 rounded-full flex items-center justify-center text-[10px] font-black border border-success/50">IA</div>
+                    <div className="w-7 h-7 bg-success/30 rounded-full flex items-center justify-center text-[9px] font-black border border-success/50">IA</div>
                 </div>
             </header>
 
@@ -98,8 +98,8 @@ const MaintenanceLayout = () => {
                         key={item.path}
                         to={item.path}
                         className={`flex flex-col items-center gap-1.5 px-6 py-2.5 rounded-xl transition-all ${activePath(item.path)
-                                ? "text-[#1A365D]"
-                                : "text-slate-400"
+                            ? "text-[#1A365D]"
+                            : "text-slate-400"
                             }`}
                     >
                         <item.icon className="w-6 h-6" />
