@@ -2,31 +2,35 @@ import { type LucideIcon } from "lucide-react";
 
 interface StatCardProps {
   title: string;
-  value: number;
+  value: number | string;
   icon: LucideIcon;
-  variant: "destructive" | "success" | "default";
+  variant: "destructive" | "success" | "default" | "warning";
+  subtitle?: string;
 }
 
 const variantStyles = {
   destructive: "border-destructive/20 bg-destructive/5",
   success: "border-success/20 bg-success/5",
+  warning: "border-warning/20 bg-warning/5",
   default: "border-border bg-card",
 };
 
 const iconStyles = {
   destructive: "bg-destructive/10 text-destructive",
   success: "bg-success/10 text-success",
+  warning: "bg-warning/10 text-warning",
   default: "bg-primary/10 text-primary",
 };
 
-const StatCard = ({ title, value, icon: Icon, variant }: StatCardProps) => (
-  <div className={`rounded-xl border p-5 ${variantStyles[variant]}`}>
+const StatCard = ({ title, value, icon: Icon, variant, subtitle }: StatCardProps) => (
+  <div className={`rounded-xl border p-4 ${variantStyles[variant]}`}>
     <div className="flex items-center justify-between">
       <div>
-        <p className="text-sm text-muted-foreground font-medium">{title}</p>
-        <p className="text-3xl font-display font-bold text-foreground mt-1">{value}</p>
+        <p className="text-xs text-muted-foreground font-medium">{title}</p>
+        <p className="text-2xl font-display font-bold text-foreground mt-0.5">{value}</p>
+        {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
       </div>
-      <div className={`w-11 h-11 rounded-lg flex items-center justify-center ${iconStyles[variant]}`}>
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${iconStyles[variant]}`}>
         <Icon className="w-5 h-5" />
       </div>
     </div>
