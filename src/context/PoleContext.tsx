@@ -7,7 +7,7 @@ export interface FaultReport {
   faultType: string;
   severity: "Low" | "Medium" | "High" | "Critical";
   description: string;
-  photoUrl: string;
+  photoUrl?: string; // Opt out for initial fetch to increase speed
   timestamp: Date;
   reportedBy: string;
   contactInfo: string;
@@ -30,8 +30,8 @@ export interface Repair {
   techName: string;
   faultCategory: string;
   workNotes: string;
-  beforePhotoUrl: string;
-  afterPhotoUrl: string;
+  beforePhotoUrl?: string; // Opt out for initial fetch
+  afterPhotoUrl?: string; // Opt out for initial fetch
   status: string;
   timestamp: Date;
 }
@@ -45,6 +45,10 @@ interface PoleContextType {
   submitRepair: (repair: Partial<Repair>) => Promise<void>;
   addPole: (pole: Partial<Pole>) => Promise<void>;
   deletePole: (id: string) => Promise<void>;
+  deleteRepair: (id: string) => Promise<void>;
+  fetchReportPhoto: (id: string) => Promise<string | null>;
+  fetchRepairPhotos: (id: string) => Promise<{ before: string, after: string } | null>;
+  fetchPoleBeforePhoto: (id: string) => Promise<string | null>;
   loading: boolean;
   loadingRepairs: boolean;
 }
@@ -62,8 +66,8 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
       const { data: polesData, error: polesError } = await supabase
         .from("poles")
         .select(`
-          *,
-          reports (*)
+          id, zone, status, days_outage, last_inspected, install_date,
+          reports (id, pole_id, fault_type, severity, description, timestamp, reported_by, contact_info)
         `);
 
       if (polesError) throw polesError;
@@ -75,7 +79,6 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
         daysOutage: p.days_outage || 0,
         lastInspected: new Date(p.last_inspected),
         installDate: new Date(p.install_date),
-        beforePhoto: p.current_repair_before_photo,
         reports: (p.reports || []).map((r: any) => ({
           id: r.id,
           poleId: r.pole_id,
@@ -101,7 +104,7 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { data, error } = await supabase
         .from("repairs")
-        .select("*")
+        .select("id, pole_id, tech_name, fault_category, work_notes, status, timestamp")
         .order("timestamp", { ascending: false });
 
       if (error) throw error;
@@ -112,8 +115,6 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
         techName: r.tech_name,
         faultCategory: r.fault_category,
         workNotes: r.work_notes,
-        beforePhotoUrl: r.before_photo_url,
-        afterPhotoUrl: r.after_photo_url,
         status: r.status,
         timestamp: new Date(r.timestamp),
       }));
@@ -275,10 +276,42 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { error } = await supabase.from("poles").delete().eq("id", id);
       if (error) throw error;
+      // Local state will be updated by subscription, but manual filter ensures immediate UI feedback
+      setPoles(prev => prev.filter(p => p.id !== id));
     } catch (error) {
       console.error("Error deleting pole:", error);
       throw error;
     }
+  };
+
+  const deleteRepair = async (id: string) => {
+    try {
+      const { error } = await supabase.from("repairs").delete().eq("id", id);
+      if (error) throw error;
+      // Local state will be updated by subscription, but we can also do it manually for immediate feedback
+      setRepairs(prev => prev.filter(r => r.id !== id));
+    } catch (error) {
+      console.error("Error deleting repair record:", error);
+      throw error;
+    }
+  };
+
+  const fetchReportPhoto = async (id: string) => {
+    const { data, error } = await supabase.from("reports").select("photo_url").eq("id", id).single();
+    if (error) return null;
+    return data.photo_url;
+  };
+
+  const fetchRepairPhotos = async (id: string) => {
+    const { data, error } = await supabase.from("repairs").select("before_photo_url, after_photo_url").eq("id", id).single();
+    if (error) return null;
+    return { before: data.before_photo_url, after: data.after_photo_url };
+  };
+
+  const fetchPoleBeforePhoto = async (id: string) => {
+    const { data, error } = await supabase.from("poles").select("current_repair_before_photo").eq("id", id).single();
+    if (error) return null;
+    return data.current_repair_before_photo;
   };
 
   return (
@@ -291,6 +324,10 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
       submitRepair,
       addPole,
       deletePole,
+      deleteRepair,
+      fetchReportPhoto,
+      fetchRepairPhotos,
+      fetchPoleBeforePhoto,
       loading,
       loadingRepairs
     }}>

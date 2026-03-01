@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { usePoles, type Pole } from "@/context/PoleContext";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import LoadingScreen from "@/components/LoadingScreen";
 
 import {
     Dialog,
@@ -21,6 +22,88 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import { format } from "date-fns";
+
+const ReportDetailsModal = ({ report, poleId }: { report: any, poleId: string }) => {
+    const { fetchReportPhoto } = usePoles();
+    const [photo, setPhoto] = useState<string | null>(null);
+    const [loadingPhoto, setLoadingPhoto] = useState(false);
+
+    const handleOpen = async () => {
+        if (!photo && !loadingPhoto) {
+            setLoadingPhoto(true);
+            const fetchedPhoto = await fetchReportPhoto(report.id);
+            setPhoto(fetchedPhoto);
+            setLoadingPhoto(false);
+        }
+    };
+
+    return (
+        <Dialog onOpenChange={(open) => open && handleOpen()}>
+            <DialogTrigger asChild>
+                <Button variant="ghost" className="w-full text-[10px] h-8 font-black uppercase tracking-widest text-[#1A365D]/60 hover:text-[#1A365D] hover:bg-slate-50 gap-2">
+                    <AlertTriangle className="w-3 h-3" />
+                    View Original Report
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md bg-white border-none rounded-2xl shadow-2xl p-0 overflow-hidden">
+                <div className="bg-[#1A365D] p-6 text-white">
+                    <DialogTitle className="text-xl font-black uppercase tracking-tight">Fault Report: {poleId}</DialogTitle>
+                    <DialogDescription className="text-white/60 text-xs font-bold uppercase tracking-widest mt-1">
+                        Reported on {format(new Date(report.timestamp), "MMM dd, yyyy @ h:mm a")}
+                    </DialogDescription>
+                </div>
+                <div className="p-6 space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Issue Category</p>
+                            <Badge variant="secondary" className="font-bold">{report.faultType}</Badge>
+                        </div>
+                        <div className="space-y-1 text-right">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Severity</p>
+                            <Badge className={
+                                report.severity === "Critical" ? "bg-red-600" :
+                                    report.severity === "High" ? "bg-orange-500" :
+                                        "bg-amber-500"
+                            }>
+                                {report.severity}
+                            </Badge>
+                        </div>
+                    </div>
+
+                    <div className="rounded-xl overflow-hidden border border-slate-100 shadow-inner group">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Evidence Photo</p>
+                        {loadingPhoto ? (
+                            <div className="w-full h-48 bg-slate-50 animate-pulse flex items-center justify-center">
+                                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Loading Photo...</span>
+                            </div>
+                        ) : photo ? (
+                            <img
+                                src={photo}
+                                alt="Fault"
+                                className="w-full h-48 object-cover cursor-zoom-in hover:scale-105 transition-transform"
+                                onClick={() => window.open(photo, "_blank")}
+                            />
+                        ) : (
+                            <div className="w-full h-48 bg-slate-50 flex items-center justify-center text-slate-300">
+                                <span className="text-[10px] font-bold uppercase tracking-widest">No Evidence Provided</span>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="space-y-2">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Description</p>
+                        <div className="p-4 bg-slate-50 rounded-xl italic text-sm text-[#1A365D] border-l-4 border-[#1A365D]/20">
+                            "{report.description || "No written description provided."}"
+                        </div>
+                    </div>
+                </div>
+                <div className="p-4 bg-slate-50 border-t border-slate-100 text-center">
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">University of Ghana Maintenance Team</p>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+};
 
 const MaintenanceDashboard = () => {
     const { poles, loading, startRepair } = usePoles();
@@ -62,11 +145,7 @@ const MaintenanceDashboard = () => {
     };
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center py-20">
-                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-            </div>
-        );
+        return <LoadingScreen message="Syncing task dashboard..." />;
     }
 
     return (
@@ -183,62 +262,7 @@ const MaintenanceDashboard = () => {
                                     </div>
 
                                     {latestReport && (
-                                        <Dialog>
-                                            <DialogTrigger asChild>
-                                                <Button variant="ghost" className="w-full text-[10px] h-8 font-black uppercase tracking-widest text-[#1A365D]/60 hover:text-[#1A365D] hover:bg-slate-50 gap-2">
-                                                    <AlertTriangle className="w-3 h-3" />
-                                                    View Original Report
-                                                </Button>
-                                            </DialogTrigger>
-                                            <DialogContent className="sm:max-w-md bg-white border-none rounded-2xl shadow-2xl p-0 overflow-hidden">
-                                                <div className="bg-[#1A365D] p-6 text-white">
-                                                    <DialogTitle className="text-xl font-black uppercase tracking-tight">Fault Report: {pole.id}</DialogTitle>
-                                                    <DialogDescription className="text-white/60 text-xs font-bold uppercase tracking-widest mt-1">
-                                                        Reported on {format(new Date(latestReport.timestamp), "MMM dd, yyyy @ h:mm a")}
-                                                    </DialogDescription>
-                                                </div>
-                                                <div className="p-6 space-y-6">
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div className="space-y-1">
-                                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Issue Category</p>
-                                                            <Badge variant="secondary" className="font-bold">{latestReport.faultType}</Badge>
-                                                        </div>
-                                                        <div className="space-y-1 text-right">
-                                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Severity</p>
-                                                            <Badge className={
-                                                                latestReport.severity === "Critical" ? "bg-red-600" :
-                                                                    latestReport.severity === "High" ? "bg-orange-500" :
-                                                                        "bg-amber-500"
-                                                            }>
-                                                                {latestReport.severity}
-                                                            </Badge>
-                                                        </div>
-                                                    </div>
-
-                                                    {latestReport.photoUrl && (
-                                                        <div className="rounded-xl overflow-hidden border border-slate-100 shadow-inner group">
-                                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Evidence Photo</p>
-                                                            <img
-                                                                src={latestReport.photoUrl}
-                                                                alt="Fault"
-                                                                className="w-full h-48 object-cover cursor-zoom-in hover:scale-105 transition-transform"
-                                                                onClick={() => window.open(latestReport.photoUrl, "_blank")}
-                                                            />
-                                                        </div>
-                                                    )}
-
-                                                    <div className="space-y-2">
-                                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Description</p>
-                                                        <div className="p-4 bg-slate-50 rounded-xl italic text-sm text-[#1A365D] border-l-4 border-[#1A365D]/20">
-                                                            "{latestReport.description || "No written description provided."}"
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="p-4 bg-slate-50 border-t border-slate-100 text-center">
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">University of Ghana Maintenance Team</p>
-                                                </div>
-                                            </DialogContent>
-                                        </Dialog>
+                                        <ReportDetailsModal report={latestReport} poleId={pole.id} />
                                     )}
                                 </div>
                             </div>

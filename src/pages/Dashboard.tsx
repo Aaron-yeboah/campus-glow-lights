@@ -26,9 +26,11 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 const Dashboard = () => {
-  const { poles, loading, deletePole, repairs } = usePoles();
+  const { poles, loading, deletePole, repairs, deleteRepair, fetchRepairPhotos } = usePoles();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [selectedPole, setSelectedPole] = useState<Pole | null>(null);
@@ -93,6 +95,81 @@ const Dashboard = () => {
     return result;
   }, [poles, search, statusFilter, sortBy]);
 
+  const downloadFullReport = () => {
+    try {
+      // Prepare Poles Data
+      const polesSheetData = poles.map(p => ({
+        "Pole ID": p.id,
+        "Zone": p.zone,
+        "Status": p.status,
+        "Days Outage": p.daysOutage,
+        "Last Inspected": format(new Date(p.lastInspected), "yyyy-MM-dd HH:mm"),
+        "Install Date": format(new Date(p.installDate), "yyyy-MM-dd"),
+        "Total Reports": p.reports.length
+      }));
+
+      // Prepare Fault Reports Data
+      const reportsSheetData = poles.flatMap(p => p.reports.map(r => ({
+        "Report ID": r.id,
+        "Pole ID": r.poleId,
+        "Fault Type": r.faultType,
+        "Severity": r.severity,
+        "Description": r.description,
+        "Timestamp": format(new Date(r.timestamp), "yyyy-MM-dd HH:mm"),
+        "Reported By": r.reportedBy,
+        "Contact Info": r.contactInfo
+      })));
+
+      // Prepare Repairs Data
+      const repairsSheetData = repairs.map(r => ({
+        "Repair ID": r.id,
+        "Pole ID": r.poleId,
+        "Technician": r.techName,
+        "Fault Category": r.faultCategory,
+        "Work Notes": r.workNotes,
+        "Status": r.status,
+        "Timestamp": format(new Date(r.timestamp), "yyyy-MM-dd HH:mm")
+      }));
+
+      // Prepare Summary Data
+      const summaryData = [
+        { "Category": "System Overview", "Metric": "Total Streetlights", "Value": poles.length },
+        { "Category": "System Overview", "Metric": "Operational", "Value": operational },
+        { "Category": "System Overview", "Metric": "Defective", "Value": activeFaults },
+        { "Category": "System Overview", "Metric": "System Health Score", "Value": `${healthPercent}%` },
+        { "Category": "Analytics", "Metric": "Total Faults Reported (All Time)", "Value": totalReports },
+        { "Category": "Analytics", "Metric": "Total Successful Repairs", "Value": totalRepairs },
+        { "Category": "Analytics", "Metric": "Average Outage Duration", "Value": `${avgOutage} Days` },
+        { "Category": "Analytics", "Metric": "Critical Faults (5+ Days)", "Value": criticalFaults }
+      ];
+
+      // Create Workbook
+      const wb = XLSX.utils.book_new();
+
+      const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, wsSummary, "Dashboard Summary");
+
+      const wsPoles = XLSX.utils.json_to_sheet(polesSheetData);
+      XLSX.utils.book_append_sheet(wb, wsPoles, "Streetlights Inventory");
+
+      const wsReports = XLSX.utils.json_to_sheet(reportsSheetData);
+      XLSX.utils.book_append_sheet(wb, wsReports, "Active Fault Reports");
+
+      const wsRepairs = XLSX.utils.json_to_sheet(repairsSheetData);
+      XLSX.utils.book_append_sheet(wb, wsRepairs, "Maintenance History");
+
+      // Generate Excel file
+      const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      const data = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8" });
+
+      saveAs(data, `Campus_Glow_Full_Report_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+      toast.success("Comprehensive report generated and downloaded");
+    } catch (error) {
+      console.error("Report generation failed:", error);
+      toast.error("Failed to generate report");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -144,7 +221,17 @@ const Dashboard = () => {
                 </TabsTrigger>
               </TabsList>
 
-              <AddPoleModal />
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  onClick={downloadFullReport}
+                  variant="outline"
+                  className="bg-[#1A365D] hover:bg-[#1A365D]/90 text-white font-bold h-10 px-4 rounded-lg shadow-sm gap-2 border-none"
+                >
+                  <FileText className="w-4 h-4" />
+                  Download Overview Report
+                </Button>
+                <AddPoleModal />
+              </div>
             </div>
 
             <TabsContent value="dashboard" className="space-y-6">
@@ -470,10 +557,15 @@ const Dashboard = () => {
                                   variant="outline"
                                   size="sm"
                                   className="text-xs font-bold gap-2"
-                                  onClick={() => {
-                                    const win = window.open("", "_blank");
-                                    if (win) {
-                                      win.document.write(`
+                                  onClick={async () => {
+                                    const loadingToast = toast.loading("Fetching repair evidence...");
+                                    const photos = await fetchRepairPhotos(repair.id);
+                                    toast.dismiss(loadingToast);
+
+                                    if (photos) {
+                                      const win = window.open("", "_blank");
+                                      if (win) {
+                                        win.document.write(`
                                       <html>
                                         <head><title>Receipt - ${repair.poleId}</title></head>
                                         <body style="margin:0; background:#0f172a; display:flex; flex-direction:column; align-items:center; color:white; font-family:sans-serif; padding:40px;">
@@ -483,11 +575,11 @@ const Dashboard = () => {
                                           <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px; width:100%; max-width:1100px;">
                                             <div style="background:rgba(255,255,255,0.03); padding:20px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);">
                                               <p style="font-weight:bold; letter-spacing:2px; font-size:12px; color:rgba(255,255,255,0.4);">BEFORE REPAIR</p>
-                                              <img src="${repair.beforePhotoUrl}" style="width:100%; height:400px; object-fit:cover; border-radius:12px; margin-top:10px;"/>
+                                              <img src="${photos.before || ""}" style="width:100%; height:400px; object-fit:cover; border-radius:12px; margin-top:10px;"/>
                                             </div>
                                             <div style="background:rgba(255,255,255,0.03); padding:20px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);">
                                               <p style="font-weight:bold; letter-spacing:2px; font-size:12px; color:rgba(255,255,255,0.4);">AFTER REPAIR</p>
-                                              <img src="${repair.afterPhotoUrl}" style="width:100%; height:400px; object-fit:cover; border-radius:12px; margin-top:10px;"/>
+                                              <img src="${photos.after || ""}" style="width:100%; height:400px; object-fit:cover; border-radius:12px; margin-top:10px;"/>
                                             </div>
                                           </div>
 
@@ -507,7 +599,10 @@ const Dashboard = () => {
                                         </body>
                                       </html>
                                     `);
-                                      win.document.close();
+                                        win.document.close();
+                                      }
+                                    } else {
+                                      toast.error("Failed to load photos.");
                                     }
                                   }}
                                 >
@@ -518,11 +613,11 @@ const Dashboard = () => {
                                   variant="ghost"
                                   size="sm"
                                   className="text-destructive hover:bg-destructive/10"
-                                  onClick={async () => {
+                                  onClick={() => {
                                     if (confirm("Permanently delete this maintenance record?")) {
-                                      const { error } = await supabase.from("repairs").delete().eq("id", repair.id);
-                                      if (error) toast.error("Failed to delete record");
-                                      else toast.success("Record removed");
+                                      deleteRepair(repair.id)
+                                        .then(() => toast.success("Record removed"))
+                                        .catch(() => toast.error("Failed to delete record"));
                                     }
                                   }}
                                 >

@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { usePoles } from "@/context/PoleContext";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import LoadingScreen from "@/components/LoadingScreen";
 
 const faultTypes = [
     "Flickering",
@@ -97,7 +98,7 @@ const ImageUploader = ({ label, id, photo, setPhoto, readOnly = false }: { label
 const RepairForm = () => {
     const { poleId } = useParams();
     const navigate = useNavigate();
-    const { submitRepair, poles } = usePoles();
+    const { submitRepair, poles, loading, fetchPoleBeforePhoto } = usePoles();
 
     const [faultCategory, setFaultCategory] = useState("");
     const [workNotes, setWorkNotes] = useState("");
@@ -109,22 +110,30 @@ const RepairForm = () => {
 
     // Effect to pre-fill data from the latest report and the "In Progress" photo
     useEffect(() => {
-        if (pole) {
-            // 1. Pre-fill Before Photo from the "Start Work" capture
-            if (pole.beforePhoto) {
-                setBeforePhoto(pole.beforePhoto);
-            }
+        const loadInitialData = async () => {
+            if (pole) {
+                // 1. Pre-fill Before Photo from the "Start Work" capture (fetching on demand)
+                if (pole.status === "In Progress") {
+                    const photo = await fetchPoleBeforePhoto(pole.id);
+                    if (photo) setBeforePhoto(photo);
+                }
 
-            // 2. Pre-fill Fault Category from the latest student report
-            const latestReport = [...pole.reports].sort((a, b) =>
-                new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-            )[0];
+                // 2. Pre-fill Fault Category from the latest student report
+                const latestReport = [...pole.reports].sort((a, b) =>
+                    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+                )[0];
 
-            if (latestReport) {
-                setFaultCategory(latestReport.faultType);
+                if (latestReport) {
+                    setFaultCategory(latestReport.faultType);
+                }
             }
-        }
+        };
+        loadInitialData();
     }, [pole]);
+
+    if (loading) {
+        return <LoadingScreen message="Retrieving pole data..." />;
+    }
 
     const handleSubmit = async () => {
         if (!faultCategory || !beforePhoto || !afterPhoto || !poleId) {

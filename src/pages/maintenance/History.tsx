@@ -9,9 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
 import { usePoles } from "@/context/PoleContext";
+import LoadingScreen from "@/components/LoadingScreen";
+import { toast } from "sonner";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 const MaintenanceHistory = () => {
-    const { repairs, loadingRepairs } = usePoles();
+    const { repairs, loadingRepairs, fetchRepairPhotos } = usePoles();
     const [search, setSearch] = useState("");
 
     const filteredFixes = useMemo(() => {
@@ -23,11 +27,7 @@ const MaintenanceHistory = () => {
     }, [repairs, search]);
 
     if (loadingRepairs) {
-        return (
-            <div className="flex items-center justify-center py-20">
-                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-            </div>
-        );
+        return <LoadingScreen message="Loading history records..." />;
     }
 
     return (
@@ -101,8 +101,12 @@ const MaintenanceHistory = () => {
                                             variant="outline"
                                             size="sm"
                                             className="h-9 border-slate-200 text-[#1A365D] hover:bg-slate-50 hover:text-[#1A365D] font-bold text-[10px] uppercase tracking-wide px-3"
-                                            onClick={() => {
-                                                if (f.afterPhotoUrl || f.beforePhotoUrl) {
+                                            onClick={async () => {
+                                                const loadingToast = toast.loading("Fetching repair evidence...");
+                                                const photos = await fetchRepairPhotos(f.id);
+                                                toast.dismiss(loadingToast);
+
+                                                if (photos?.after || photos?.before) {
                                                     const win = window.open("", "_blank");
                                                     win?.document.write(`
                                                         <html>
@@ -111,11 +115,11 @@ const MaintenanceHistory = () => {
                                                                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; width:100%; max-width:1000px;">
                                                                     <div>
                                                                         <p>BEFORE</p>
-                                                                        <img src="${f.beforePhotoUrl}" style="width:100%; border-radius:10px;"/>
+                                                                        <img src="${photos.before || ""}" style="width:100%; border-radius:10px;"/>
                                                                     </div>
                                                                     <div>
                                                                         <p>AFTER</p>
-                                                                        <img src="${f.afterPhotoUrl}" style="width:100%; border-radius:10px;"/>
+                                                                        <img src="${photos.after || ""}" style="width:100%; border-radius:10px;"/>
                                                                     </div>
                                                                 </div>
                                                                 <div style="margin-top:20px; text-align:left; width:100%; max-width:1000px; background:rgba(255,255,255,0.05); padding:20px; border-radius:10px;">
@@ -126,6 +130,8 @@ const MaintenanceHistory = () => {
                                                             </body>
                                                         </html>
                                                     `);
+                                                } else {
+                                                    toast.error("No photos found for this record.");
                                                 }
                                             }}
                                         >
@@ -161,8 +167,28 @@ const MaintenanceHistory = () => {
                     <p className="text-xs font-bold text-[#1A365D]">Cloud Synchronized</p>
                     <p className="text-[10px] text-slate-500 font-medium">All repairs are recorded for University of Ghana maintenance analytics.</p>
                 </div>
-                <Button variant="outline" className="ml-auto h-9 bg-white border-slate-200 text-[#1A365D] font-bold text-xs">
-                    Export CSV
+                <Button
+                    variant="outline"
+                    className="ml-auto h-9 bg-white border-slate-200 text-[#1A365D] font-bold text-xs"
+                    onClick={() => {
+                        const csvData = filteredFixes.map(f => ({
+                            "Date": format(f.timestamp, "yyyy-MM-dd"),
+                            "Time": format(f.timestamp, "h:mm a"),
+                            "Technician": f.techName,
+                            "Pole ID": f.poleId,
+                            "Fault Category": f.faultCategory,
+                            "Work Notes": f.workNotes || "N/A",
+                            "Status": f.status
+                        }));
+                        const ws = XLSX.utils.json_to_sheet(csvData);
+                        const wb = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(wb, ws, "Maintenance History");
+                        const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+                        const data = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8" });
+                        saveAs(data, `Maintenance_History_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+                    }}
+                >
+                    Export Sheet
                     <Download className="w-3.5 h-3.5 ml-2" />
                 </Button>
             </div>
