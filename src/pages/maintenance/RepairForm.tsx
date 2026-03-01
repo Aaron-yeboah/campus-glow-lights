@@ -42,7 +42,7 @@ const ImageUploader = ({ label, id, photo, setPhoto, readOnly = false }: { label
                 const base64 = reader.result as string;
                 try {
                     const compToast = toast.loading("Optimizing photo...");
-                    const compressed = await compressImage(base64);
+                    const compressed = await compressImage(base64, 1000, 1000, 0.6);
                     setPhoto(compressed);
                     toast.dismiss(compToast);
                 } catch (error) {
@@ -106,12 +106,13 @@ const ImageUploader = ({ label, id, photo, setPhoto, readOnly = false }: { label
 const RepairForm = () => {
     const { poleId } = useParams();
     const navigate = useNavigate();
-    const { submitRepair, poles, loading, fetchPoleBeforePhoto } = usePoles();
+    const { submitRepair, poles, loading, fetchPoleBeforePhoto, fetchReportDetails } = usePoles();
 
     const [faultCategory, setFaultCategory] = useState("");
     const [workNotes, setWorkNotes] = useState("");
     const [beforePhoto, setBeforePhoto] = useState<string | null>(null);
     const [afterPhoto, setAfterPhoto] = useState<string | null>(null);
+    const [referencePhoto, setReferencePhoto] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
 
     const pole = poles.find(p => p.id === poleId);
@@ -133,6 +134,9 @@ const RepairForm = () => {
 
                 if (latestReport) {
                     setFaultCategory(latestReport.faultType);
+                    // Fetch the photo for the latest report specifically for reference
+                    const details = await fetchReportDetails(latestReport.id);
+                    if (details?.photoUrl) setReferencePhoto(details.photoUrl);
                 }
             }
         };
@@ -167,8 +171,9 @@ const RepairForm = () => {
             });
 
             navigate("/maintenance/history");
-        } catch (error) {
-            toast.error("Cloud synchronization failed. Please try again.");
+        } catch (error: any) {
+            console.error("Repair Submission Error:", error);
+            toast.error(`Sync failed: ${error.message || "Please try again"}`);
         } finally {
             setSubmitting(false);
         }
@@ -206,9 +211,9 @@ const RepairForm = () => {
                             <Badge className="ml-auto bg-white text-[#1A365D] border-slate-200 uppercase text-[9px]">{latestReport.severity} Severity</Badge>
                         </div>
                         <div className="flex gap-4">
-                            {latestReport.photoUrl && (
+                            {referencePhoto && (
                                 <div className="w-16 h-16 rounded-lg overflow-hidden border border-white shadow-sm flex-shrink-0">
-                                    <img src={latestReport.photoUrl} className="w-full h-full object-cover" />
+                                    <img src={referencePhoto} className="w-full h-full object-cover" />
                                 </div>
                             )}
                             <div className="space-y-1">

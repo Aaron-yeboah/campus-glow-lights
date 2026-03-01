@@ -196,8 +196,8 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
         .eq("id", poleId);
 
       if (poleError) throw poleError;
-    } catch (error) {
-      console.error("Error submitting report:", error);
+    } catch (error: any) {
+      console.error("Supabase Submit Report Error:", error.message || error);
       throw error;
     }
   };
@@ -258,8 +258,8 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
       if (repair.poleId) {
         await markRepaired(repair.poleId);
       }
-    } catch (error) {
-      console.error("Error submitting repair:", error);
+    } catch (error: any) {
+      console.error("Supabase Submit Repair Error:", error.message || error);
       throw error;
     }
   };

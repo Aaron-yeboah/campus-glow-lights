@@ -64,7 +64,7 @@ const Report = () => {
         try {
           // Add a loading toast for the compression if it's potentially slow
           const compToast = toast.loading("Optimizing high-res photo...");
-          const compressed = await compressImage(base64);
+          const compressed = await compressImage(base64, 1000, 1000, 0.6);
           setPhoto(compressed);
           toast.dismiss(compToast);
         } catch (error) {
@@ -87,8 +87,9 @@ const Report = () => {
       await submitReport(poleId, faultType, severity, description, photo, contactInfo);
       setSubmitted(true);
       toast.success("Report submitted successfully!");
-    } catch (error) {
-      toast.error("Failed to submit report. Please try again.");
+    } catch (error: any) {
+      console.error("Report Submission Error:", error);
+      toast.error(`Submission failed: ${error.message || "Please try again"}`);
     } finally {
       setSubmitting(false);
     }
