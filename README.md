@@ -1,73 +1,36 @@
-# Welcome to your Lovable project
+# Campus Glow 💡
 
-## Project info
+A smart streetlight management and fault reporting system for the University of Ghana.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Overview
+Campus Glow provides a real-time dashboard for campus administrators to monitor streetlight health, manage assets, and generate QR-based reporting labels. Students and faculty can scan these labels to instantly report outages or damages.
 
-## How can I edit this code?
+## Features
+- **Real-time Monitoring**: Powered by Supabase for instant updates.
+- **Fault Reporting**: Mobile-first reporting flow with photo proof.
+- **QR Management**: Generate and print individual QR labels for every pole on campus.
+- **Analytics**: visualized insights into common fault types and zone-based health.
+- **Responsive Admin Portal**: Manage everything from any device.
 
-There are several ways of editing your application.
+## Tech Stack
+- **Frontend**: React (Vite), TypeScript, Tailwind CSS
+- **UI Components**: Shadcn UI, Lucide Icons
+- **Backend**: Supabase (Database, Real-time)
+- **Visualization**: Recharts
 
-**Use Lovable**
+## Getting Started
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### Local Development
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Create a `.env` file with your Supabase credentials:
+   ```
+   VITE_SUPABASE_URL=your_url
+   VITE_SUPABASE_ANON_KEY=your_key
+   ```
+4. Run the development server: `npm run dev`
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
+### Building for Production
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+npm run build
 ```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)

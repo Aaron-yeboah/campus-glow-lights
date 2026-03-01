@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { MapPin, Clock, AlertTriangle, Calendar, ShieldAlert, FileText, Phone } from "lucide-react";
 import { Pole, usePoles } from "@/context/PoleContext";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 interface PoleDrawerProps {
   pole: Pole | null;
@@ -69,8 +70,15 @@ const PoleDrawer = ({ pole, open, onClose }: PoleDrawerProps) => {
             </div>
             <Switch
               checked={pole.status === "Operational"}
-              onCheckedChange={() => {
-                if (pole.status === "Defective") markRepaired(pole.id);
+              onCheckedChange={async () => {
+                if (pole.status === "Defective") {
+                  try {
+                    await markRepaired(pole.id);
+                    toast.success(`Pole ${pole.id} marked as operational`);
+                  } catch (error) {
+                    toast.error("Failed to update pole status");
+                  }
+                }
               }}
             />
           </div>

@@ -1,11 +1,17 @@
 import { useState, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Camera, Upload, CheckCircle, AlertTriangle, Lightbulb, MapPin, Phone, FileText, ShieldAlert } from "lucide-react";
+import {
+  Camera, Upload, CheckCircle, AlertTriangle, Lightbulb,
+  MapPin, Phone, FileText, ShieldAlert
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { usePoles } from "@/context/PoleContext";
 import { toast } from "sonner";
 import ugLogo from "@/assets/ug-logo.png";
@@ -33,7 +39,7 @@ const severityLevels = [
 const Report = () => {
   const [searchParams] = useSearchParams();
   const poleId = searchParams.get("poleId") || "";
-  const { submitReport, poles } = usePoles();
+  const { submitReport, poles, loading } = usePoles();
 
   const [photo, setPhoto] = useState<string | null>(null);
   const [faultType, setFaultType] = useState("");
@@ -41,6 +47,7 @@ const Report = () => {
   const [description, setDescription] = useState("");
   const [contactInfo, setContactInfo] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const pole = poles.find((p) => p.id === poleId);
@@ -48,38 +55,56 @@ const Report = () => {
   const handleCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        toast.error("Photo is too large. Please take a smaller photo.");
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => setPhoto(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
 
-  const handleSubmit = () => {
-    if (!photo || !faultType || !poleId || !severity) return;
-    submitReport(poleId, faultType, severity, description, photo, contactInfo);
-    setSubmitted(true);
-    toast.success("Report submitted successfully!");
+  const handleSubmit = async () => {
+    if (!photo || !faultType || !poleId || !severity) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+    try {
+      setSubmitting(true);
+      await submitReport(poleId, faultType, severity, description, photo, contactInfo);
+      setSubmitted(true);
+      toast.success("Report submitted successfully!");
+    } catch (error) {
+      toast.error("Failed to submit report. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (submitted) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center space-y-4 max-w-sm">
-          <div className="mx-auto w-16 h-16 rounded-full bg-success/10 flex items-center justify-center">
-            <CheckCircle className="w-8 h-8 text-success" />
+        <div className="text-center space-y-6 max-w-sm">
+          <div className="mx-auto w-20 h-20 rounded-full bg-success/10 flex items-center justify-center animate-bounce">
+            <CheckCircle className="w-10 h-10 text-success" />
           </div>
-          <h2 className="text-2xl font-display font-bold text-foreground">Report Submitted!</h2>
-          <p className="text-muted-foreground">
-            Your fault report for pole <span className="font-semibold text-foreground">{poleId}</span> has been received.
-            The maintenance team will be notified.
-          </p>
-          <div className="rounded-lg border bg-card p-3 text-left space-y-1">
-            <p className="text-xs text-muted-foreground">Summary</p>
-            <p className="text-sm font-medium text-foreground">{faultType} — {severity} severity</p>
-            {description && <p className="text-xs text-muted-foreground">{description}</p>}
+          <div className="space-y-2">
+            <h2 className="text-2xl font-display font-bold text-foreground">Report Received!</h2>
+            <p className="text-muted-foreground text-sm">
+              Your fault report for pole <span className="font-mono font-bold text-foreground">{poleId}</span> has been synced with the database.
+            </p>
           </div>
-          <Button variant="outline" onClick={() => { setSubmitted(false); setPhoto(null); setFaultType(""); setSeverity(""); setDescription(""); setContactInfo(""); }}>
-            Submit Another Report
+          <div className="rounded-xl border bg-card p-4 text-left space-y-2 shadow-sm">
+            <div className="flex justify-between items-center">
+              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Issue Summary</p>
+              <Badge variant="secondary" className="text-[10px]">{severity}</Badge>
+            </div>
+            <p className="text-sm font-semibold text-foreground">{faultType}</p>
+            {description && <p className="text-xs text-muted-foreground italic border-l-2 pl-2">"{description}"</p>}
+          </div>
+          <Button variant="outline" className="w-full" onClick={() => { setSubmitted(false); setPhoto(null); setFaultType(""); setSeverity(""); setDescription(""); setContactInfo(""); }}>
+            Return to Dashboard
           </Button>
         </div>
       </div>
@@ -87,171 +112,206 @@ const Report = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-muted/20">
       {/* Header */}
-      <div className="bg-primary text-primary-foreground px-4 py-5">
-        <div className="flex items-center gap-3 max-w-lg mx-auto">
-          <img src={ugLogo} alt="UG Logo" className="w-10 h-10 object-contain" />
+      <div className="bg-primary text-primary-foreground px-4 py-6 shadow-lg relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+        <div className="flex items-center gap-4 max-w-lg mx-auto relative">
+          <div className="w-12 h-12 rounded-xl bg-white/20 p-2 shadow-inner">
+            <img src={ugLogo} alt="UG Logo" className="w-full h-full object-contain" />
+          </div>
           <div>
-            <h1 className="text-lg font-display font-bold">Campus Glow</h1>
-            <p className="text-xs opacity-80">University of Ghana Streetlight Reporter</p>
+            <h1 className="text-xl font-display font-bold tracking-tight">Campus Glow</h1>
+            <p className="text-[10px] opacity-80 uppercase tracking-widest font-bold text-white/90">University of Ghana Safety</p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto p-4 space-y-4">
-        {/* Pole Info */}
-        <div className="rounded-lg border bg-card p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Lightbulb className="w-5 h-5 text-warning" />
-            <h2 className="font-display font-semibold text-foreground">Report a Fault</h2>
+      <div className="max-w-lg mx-auto p-4 space-y-4 pb-12">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-32 space-y-4">
+            <ShieldAlert className="w-12 h-12 text-primary/30 animate-pulse" />
+            <p className="text-muted-foreground font-medium text-sm">Verifying Streetlight ID...</p>
           </div>
-          <div className="space-y-3">
-            <div>
-              <Label className="text-muted-foreground text-xs">Pole ID</Label>
-              <Input value={poleId || "No Pole ID provided"} readOnly className="bg-muted font-mono font-semibold" />
+        ) : !poleId ? (
+          <div className="rounded-2xl border-2 border-dashed border-muted p-12 text-center space-y-4 bg-background">
+            <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-10 h-10 text-muted-foreground" />
             </div>
-            {pole && (
+            <div className="space-y-2">
+              <h3 className="font-display font-bold text-lg text-foreground">No ID Detected</h3>
+              <p className="text-sm text-muted-foreground px-4">Scan a QR code on any streetlight pole to instantly file a maintenance report.</p>
+            </div>
+          </div>
+        ) : !pole ? (
+          <div className="rounded-2xl border-2 border-destructive/20 p-12 text-center space-y-6 bg-background shadow-xl">
+            <div className="w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center mx-auto">
+              <ShieldAlert className="w-10 h-10 text-destructive" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="font-display font-bold text-xl text-foreground">Unrecognized Pole</h3>
+              <p className="text-sm text-muted-foreground font-mono bg-muted p-2 rounded">ID: {poleId}</p>
+              <p className="text-xs text-muted-foreground leading-relaxed mt-2">This ID was not found in the system. Please ensure you are scanning an official Campus Glow QR code.</p>
+            </div>
+            <Button variant="default" className="w-full font-bold" onClick={() => window.location.href = "/"}>
+              Return to Site
+            </Button>
+          </div>
+        ) : (
+          <>
+            {/* Pole Info Banner */}
+            <div className="rounded-2xl border bg-card p-6 shadow-sm relative overflow-hidden">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2.5 bg-warning/10 rounded-xl">
+                  <Lightbulb className="w-5 h-5 text-warning" />
+                </div>
+                <h2 className="font-display font-bold text-lg text-foreground tracking-tight">Active Reporting</h2>
+              </div>
+
+              <div className="space-y-5">
+                <div className="space-y-1.5">
+                  <Label className="text-muted-foreground text-[10px] uppercase font-black tracking-widest pl-1">Pole Identity</Label>
+                  <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 font-mono font-bold text-xl text-primary flex justify-between items-center shadow-inner">
+                    {poleId}
+                    <Badge className="bg-success/20 text-success border-success/30 hover:bg-success/20 text-[10px] font-sans">ACTIVE</Badge>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-muted-foreground text-[10px] uppercase font-black tracking-widest pl-1">Current Location</Label>
+                  <div className="flex items-center gap-3 text-sm font-semibold text-foreground bg-muted p-3 rounded-xl border">
+                    <MapPin className="w-4 h-4 text-primary" />
+                    {pole.zone}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Photo Capture Section */}
+            <div className="rounded-2xl border bg-card p-5 shadow-sm space-y-3">
+              <Label className="text-xs font-black uppercase tracking-widest text-foreground flex items-center gap-2">
+                1. Capture Proof <span className="text-destructive font-bold">*</span>
+              </Label>
+              <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleCapture} />
+
+              {!photo ? (
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  className="w-full py-12 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 flex flex-col items-center justify-center gap-3 hover:border-primary/50 hover:bg-primary/10 transition-all group"
+                >
+                  <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                    <Camera className="w-8 h-8 text-primary" />
+                  </div>
+                  <div className="text-center">
+                    <span className="text-sm text-foreground font-bold block">Snap a Photo</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Required for verification</span>
+                  </div>
+                </button>
+              ) : (
+                <div className="relative rounded-2xl overflow-hidden shadow-inner group">
+                  <img src={photo} alt="Fault" className="w-full aspect-video object-cover" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <button
+                      onClick={() => { setPhoto(null); if (fileRef.current) fileRef.current.value = ""; }}
+                      className="bg-destructive text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg flex items-center gap-2"
+                    >
+                      <AlertTriangle className="w-4 h-4" /> Retake Photo
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Fault Selection */}
+            <div className="rounded-2xl border bg-card p-5 shadow-sm space-y-4">
               <div>
-                <Label className="text-muted-foreground text-xs flex items-center gap-1"><MapPin className="w-3 h-3" /> Location</Label>
-                <Input value={pole.zone} readOnly className="bg-muted" />
+                <Label className="text-xs font-black uppercase tracking-widest text-foreground block mb-3">
+                  2. Fault Type <span className="text-destructive">*</span>
+                </Label>
+                <Select value={faultType} onValueChange={setFaultType}>
+                  <SelectTrigger className="h-12 rounded-xl">
+                    <SelectValue placeholder="What's the issue?" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {faultTypes.map((ft) => (
+                      <SelectItem key={ft} value={ft} className="py-3">{ft}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            )}
-            {pole && (
-              <div className="flex items-center gap-2 text-xs">
-                <span className={`inline-flex items-center gap-1 font-medium ${pole.status === "Operational" ? "text-success" : "text-destructive"}`}>
-                  <span className={`w-2 h-2 rounded-full ${pole.status === "Operational" ? "bg-success pulse-green" : "bg-destructive glow-red"}`} />
-                  {pole.status}
-                </span>
-                {pole.daysOutage > 0 && (
-                  <span className="text-muted-foreground">• {pole.daysOutage} day{pole.daysOutage !== 1 ? "s" : ""} outage</span>
-                )}
+
+              <div>
+                <Label className="text-xs font-black uppercase tracking-widest text-foreground flex items-center gap-2 mb-3">
+                  3. Severity <span className="text-destructive">*</span>
+                </Label>
+                <Select value={severity} onValueChange={setSeverity}>
+                  <SelectTrigger className="h-12 rounded-xl">
+                    <SelectValue placeholder="How urgent is this?" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {severityLevels.map((s) => (
+                      <SelectItem key={s.value} value={s.value} className="py-3 font-semibold">
+                        <span className={s.color}>{s.label}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* Photo Capture */}
-        <div className="rounded-lg border bg-card p-4">
-          <Label className="text-sm font-medium text-foreground mb-2 block">
-            Fault Photo <span className="text-destructive">*</span>
-          </Label>
-          <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleCapture} />
-
-          {!photo ? (
-            <button
-              onClick={() => fileRef.current?.click()}
-              className="w-full h-40 rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/50 flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-muted transition-colors"
-            >
-              <Camera className="w-10 h-10 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground font-medium">Tap to capture fault photo</span>
-              <span className="text-xs text-muted-foreground/60">Required for submission</span>
-            </button>
-          ) : (
-            <div className="relative">
-              <img src={photo} alt="Fault" className="w-full h-40 object-cover rounded-lg" />
-              <button
-                onClick={() => { setPhoto(null); if (fileRef.current) fileRef.current.value = ""; }}
-                className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold"
-              >
-                ✕
-              </button>
             </div>
-          )}
-        </div>
 
-        {/* Fault Type */}
-        <div className="rounded-lg border bg-card p-4">
-          <Label className="text-sm font-medium text-foreground mb-2 block">
-            Fault Type <span className="text-destructive">*</span>
-          </Label>
-          <Select value={faultType} onValueChange={setFaultType}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select fault type..." />
-            </SelectTrigger>
-            <SelectContent>
-              {faultTypes.map((ft) => (
-                <SelectItem key={ft} value={ft}>{ft}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+            {/* Additional Details */}
+            <div className="rounded-2xl border bg-card p-5 shadow-sm space-y-4">
+              <div>
+                <Label className="text-xs font-black uppercase tracking-widest text-foreground flex items-center gap-2 mb-3">
+                  <FileText className="w-4 h-4" /> 4. Description
+                </Label>
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Tell us more... (e.g. 'Light flickers when cars pass by')"
+                  className="min-h-[100px] resize-none rounded-xl"
+                  maxLength={500}
+                />
+              </div>
 
-        {/* Severity */}
-        <div className="rounded-lg border bg-card p-4">
-          <Label className="text-sm font-medium text-foreground mb-2 flex items-center gap-1.5">
-            <ShieldAlert className="w-4 h-4" /> Severity Level <span className="text-destructive">*</span>
-          </Label>
-          <Select value={severity} onValueChange={setSeverity}>
-            <SelectTrigger>
-              <SelectValue placeholder="How severe is the issue?" />
-            </SelectTrigger>
-            <SelectContent>
-              {severityLevels.map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  <span className={s.color}>{s.label}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+              <div>
+                <Label className="text-xs font-black uppercase tracking-widest text-foreground flex items-center gap-2 mb-3">
+                  <Phone className="w-4 h-4" /> 5. Contact Info
+                </Label>
+                <Input
+                  value={contactInfo}
+                  onChange={(e) => setContactInfo(e.target.value)}
+                  placeholder="Optional: Phone/Email"
+                  className="h-12 rounded-xl"
+                />
+              </div>
+            </div>
 
-        {/* Description */}
-        <div className="rounded-lg border bg-card p-4">
-          <Label className="text-sm font-medium text-foreground mb-2 flex items-center gap-1.5">
-            <FileText className="w-4 h-4" /> Description
-          </Label>
-          <Textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe the issue in detail... (e.g., 'The light has been off for 3 nights. Area is very dark and students feel unsafe walking at night.')"
-            className="min-h-[100px] resize-none"
-            maxLength={500}
-          />
-          <p className="text-xs text-muted-foreground mt-1 text-right">{description.length}/500</p>
-        </div>
+            {/* Submission Button */}
+            <Button
+              onClick={handleSubmit}
+              disabled={!photo || !faultType || !severity || submitting}
+              className="w-full h-16 text-lg font-black rounded-2xl shadow-xl active:scale-95 transition-transform"
+              size="lg"
+            >
+              {submitting ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Uploading...
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Upload className="w-6 h-6" /> Submit Report
+                </div>
+              )}
+            </Button>
 
-        {/* Contact Info */}
-        <div className="rounded-lg border bg-card p-4">
-          <Label className="text-sm font-medium text-foreground mb-2 flex items-center gap-1.5">
-            <Phone className="w-4 h-4" /> Contact (Optional)
-          </Label>
-          <Input
-            value={contactInfo}
-            onChange={(e) => setContactInfo(e.target.value)}
-            placeholder="Phone number or email for follow-up"
-            maxLength={100}
-          />
-          <p className="text-xs text-muted-foreground mt-1">Provide if you'd like updates on the repair status</p>
-        </div>
-
-        {/* Submit */}
-        <Button
-          onClick={handleSubmit}
-          disabled={!photo || !faultType || !poleId || !severity}
-          className="w-full h-12 text-base font-semibold disabled:opacity-40"
-          size="lg"
-        >
-          {!photo ? (
-            <>
-              <Camera className="w-5 h-5 mr-2" />
-              Photo Required to Submit
-            </>
-          ) : (
-            <>
-              <Upload className="w-5 h-5 mr-2" />
-              Submit Report
-            </>
-          )}
-        </Button>
-
-        {(!photo || !faultType || !severity) && (
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-warning/10 border border-warning/20">
-            <AlertTriangle className="w-4 h-4 text-warning mt-0.5 shrink-0" />
-            <p className="text-xs text-muted-foreground">
-              {!photo ? "Please capture a photo of the faulty streetlight." : !faultType ? "Please select a fault type." : "Please select a severity level."}
-            </p>
-          </div>
+            {!photo && (
+              <p className="text-[10px] text-center text-muted-foreground uppercase font-bold tracking-widest animate-pulse">
+                Photo Proof Required to Submit
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>
