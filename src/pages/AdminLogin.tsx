@@ -15,6 +15,7 @@ const AdminLogin = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [failedAttempts, setFailedAttempts] = useState(0);
 
     // Forgot / reset flow
     const [showForgot, setShowForgot] = useState(false);
@@ -47,9 +48,11 @@ const AdminLogin = () => {
 
             if (password === stored) {
                 sessionStorage.setItem("admin_auth", "true");
+                setFailedAttempts(0); // Reset on success
                 toast.success("Welcome to Admin Dashboard");
                 navigate("/dashboard", { replace: true });
             } else {
+                setFailedAttempts(prev => prev + 1);
                 setError("Incorrect password. Please try again.");
                 setPassword("");
             }
@@ -171,77 +174,79 @@ const AdminLogin = () => {
                         </Button>
                     </form>
 
-                    {/* Divider */}
-                    <div className="border-t border-white/10 pt-1">
-                        <button
-                            type="button"
-                            onClick={() => { setShowForgot(v => !v); setResetDone(false); }}
-                            className="w-full flex items-center justify-between text-[11px] text-white/40 hover:text-white/70 transition-colors py-1 font-medium"
-                        >
-                            <span>Forgot your password?</span>
-                            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showForgot ? "rotate-180" : ""}`} />
-                        </button>
+                    {/* Divider - Only show after 10 failed attempts */}
+                    {failedAttempts >= 10 && (
+                        <div className="border-t border-white/10 pt-1">
+                            <button
+                                type="button"
+                                onClick={() => { setShowForgot(v => !v); setResetDone(false); }}
+                                className="w-full flex items-center justify-between text-[11px] text-white/40 hover:text-white/70 transition-colors py-1 font-medium"
+                            >
+                                <span>Forgot your password?</span>
+                                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showForgot ? "rotate-180" : ""}`} />
+                            </button>
 
-                        {/* Forgot panel */}
-                        {showForgot && (
-                            <div className="mt-3 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                                {resetDone ? (
-                                    /* Success state */
-                                    <div className="flex flex-col items-center gap-3 py-3 text-center">
-                                        <div className="w-10 h-10 rounded-full bg-green-500/15 border border-green-500/25 flex items-center justify-center">
-                                            <CheckCircle className="w-5 h-5 text-green-400" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-white">Password Reset!</p>
-                                            <p className="text-[11px] text-white/50 mt-1">
-                                                Your password is now{" "}
-                                                <code className="bg-white/10 px-1.5 py-0.5 rounded font-mono font-bold text-white">
-                                                    {DEFAULT_PASSWORD}
-                                                </code>
-                                            </p>
-                                            <p className="text-[10px] text-white/35 mt-1.5">
-                                                Log in and change it in Settings.
-                                            </p>
-                                        </div>
-                                        <Button
-                                            size="sm"
-                                            onClick={() => { setResetDone(false); setShowForgot(false); }}
-                                            className="bg-[#1A365D] text-white font-bold text-xs h-8 px-4"
-                                        >
-                                            Back to Login
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    /* Reset panel */
-                                    <>
-                                        <div className="flex items-start gap-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
-                                            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                                            <div className="text-[11px] text-amber-300/80 leading-relaxed">
-                                                This will reset the password back to{" "}
-                                                <code className="bg-white/10 px-1 rounded font-mono font-bold text-amber-200">
-                                                    {DEFAULT_PASSWORD}
-                                                </code>.
-                                                Remember to update it from Settings after logging in.
+                            {/* Forgot panel */}
+                            {showForgot && (
+                                <div className="mt-3 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                                    {resetDone ? (
+                                        /* Success state */
+                                        <div className="flex flex-col items-center gap-3 py-3 text-center">
+                                            <div className="w-10 h-10 rounded-full bg-green-500/15 border border-green-500/25 flex items-center justify-center">
+                                                <CheckCircle className="w-5 h-5 text-green-400" />
                                             </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-white">Password Reset!</p>
+                                                <p className="text-[11px] text-white/50 mt-1">
+                                                    Your password is now{" "}
+                                                    <code className="bg-white/10 px-1.5 py-0.5 rounded font-mono font-bold text-white">
+                                                        {DEFAULT_PASSWORD}
+                                                    </code>
+                                                </p>
+                                                <p className="text-[10px] text-white/35 mt-1.5">
+                                                    Log in and change it in Settings.
+                                                </p>
+                                            </div>
+                                            <Button
+                                                size="sm"
+                                                onClick={() => { setResetDone(false); setShowForgot(false); }}
+                                                className="bg-[#1A365D] text-white font-bold text-xs h-8 px-4"
+                                            >
+                                                Back to Login
+                                            </Button>
                                         </div>
-                                        <Button
-                                            type="button"
-                                            onClick={handleResetToDefault}
-                                            disabled={resetting}
-                                            variant="outline"
-                                            className="w-full border-white/15 text-white/80 hover:bg-white/10 hover:text-white font-bold gap-2 h-10"
-                                        >
-                                            {resetting ? (
-                                                <><RefreshCw className="w-4 h-4 animate-spin" /> Resetting...</>
-                                            ) : (
-                                                <><RotateCcw className="w-4 h-4" /> Reset to Default Password</>
-                                            )}
-                                        </Button>
-                                    </>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                                    ) : (
+                                        /* Reset panel */
+                                        <>
+                                            <div className="flex items-start gap-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+                                                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                                                <div className="text-[11px] text-amber-300/80 leading-relaxed">
+                                                    This will reset the password back to{" "}
+                                                    <code className="bg-white/10 px-1 rounded font-mono font-bold text-amber-200">
+                                                        {DEFAULT_PASSWORD}
+                                                    </code>.
+                                                    Remember to update it from Settings after logging in.
+                                                </div>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                onClick={handleResetToDefault}
+                                                disabled={resetting}
+                                                variant="outline"
+                                                className="w-full border-white/15 text-white/80 hover:bg-white/10 hover:text-white font-bold gap-2 h-10"
+                                            >
+                                                {resetting ? (
+                                                    <><RefreshCw className="w-4 h-4 animate-spin" /> Resetting...</>
+                                                ) : (
+                                                    <><RotateCcw className="w-4 h-4" /> Reset to Default Password</>
+                                                )}
+                                            </Button>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 <p className="text-center text-[10px] text-white/25 font-medium">
