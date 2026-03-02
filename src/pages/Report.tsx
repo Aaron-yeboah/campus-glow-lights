@@ -18,6 +18,7 @@ import LoadingScreen from "@/components/LoadingScreen";
 import { toast } from "sonner";
 import ugLogo from "@/assets/ug-logo.png";
 import { compressImage } from "@/lib/image-utils";
+import DeveloperCredit from "@/components/DeveloperCredit";
 
 const faultTypes = [
   "Flickering",
@@ -341,6 +342,11 @@ const Report = () => {
           </>
         )}
       </div>
+
+      <footer className="border-t py-8 text-center text-xs text-muted-foreground mt-8 bg-background">
+        University of Ghana, Legon — Campus Glow © {new Date().getFullYear()}
+        <DeveloperCredit />
+      </footer>
     </div>
   );
 };

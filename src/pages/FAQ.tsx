@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import ugLogo from "@/assets/ug-logo.png";
+import DeveloperCredit from "@/components/DeveloperCredit";
 
 const faqs = [
     {
@@ -107,6 +108,11 @@ const FAQ = () => {
                     </Button>
                 </div>
             </div>
+
+            <footer className="border-t py-8 text-center text-xs text-muted-foreground mt-8">
+                University of Ghana, Legon — Campus Glow © {new Date().getFullYear()}
+                <DeveloperCredit />
+            </footer>
         </div>
     );
 };

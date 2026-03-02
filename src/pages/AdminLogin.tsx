@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import ugLogo from "@/assets/ug-logo.png";
+import DeveloperCredit from "@/components/DeveloperCredit";
 
 const DEFAULT_PASSWORD = "admin123";
 
@@ -251,6 +252,7 @@ const AdminLogin = () => {
 
                 <p className="text-center text-[10px] text-white/25 font-medium">
                     University of Ghana · Physical Development Directorate
+                    <DeveloperCredit />
                 </p>
             </div>
         </div>

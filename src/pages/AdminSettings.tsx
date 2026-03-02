@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import ugLogo from "@/assets/ug-logo.png";
 import { format } from "date-fns";
+import DeveloperCredit from "@/components/DeveloperCredit";
 
 const DEFAULT_PASSWORD = "admin123";
 
@@ -444,6 +445,11 @@ const AdminSettings = () => {
                         </div>
                     </div>
                 </div>
+
+                <footer className="border-t py-8 text-center text-xs text-muted-foreground mt-12">
+                    University of Ghana, Legon — Campus Glow © {new Date().getFullYear()}
+                    <DeveloperCredit />
+                </footer>
             </div>
         </div>
     );

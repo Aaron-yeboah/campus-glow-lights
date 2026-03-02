@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import ugLogo from "@/assets/ug-logo.png";
 import { Button } from "@/components/ui/button";
+import DeveloperCredit from "@/components/DeveloperCredit";
 
 const MaintenanceLayout = () => {
     const location = useLocation();
@@ -87,8 +88,14 @@ const MaintenanceLayout = () => {
             </header>
 
             {/* Main Content Area */}
-            <main className="flex-1 p-6 md:p-12 overflow-y-auto max-w-6xl mx-auto w-full">
-                <Outlet />
+            <main className="flex-1 p-6 md:p-12 overflow-y-auto max-w-6xl mx-auto w-full flex flex-col">
+                <div className="flex-1">
+                    <Outlet />
+                </div>
+                <footer className="border-t py-8 text-center text-xs text-muted-foreground mt-12">
+                    University of Ghana, Legon — Campus Glow © {new Date().getFullYear()}
+                    <DeveloperCredit />
+                </footer>
             </main>
 
             {/* Mobile Bottom Navigation */}

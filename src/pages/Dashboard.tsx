@@ -21,6 +21,7 @@ import { AddPoleModal } from "@/components/AddPoleModal";
 import { usePoles, type Pole } from "@/context/PoleContext";
 import { format } from "date-fns";
 import ugLogo from "@/assets/ug-logo.png";
+import DeveloperCredit from "@/components/DeveloperCredit";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar,
   XAxis, YAxis, Tooltip, CartesianGrid
@@ -754,6 +755,11 @@ const Dashboard = () => {
             </TabsContent>
           </Tabs>
         )}
+
+        <footer className="border-t py-12 text-center text-xs text-muted-foreground mt-20">
+          University of Ghana, Legon — Campus Glow © {new Date().getFullYear()}
+          <DeveloperCredit />
+        </footer>
       </div>
 
       <PoleDrawer pole={selectedPole} open={drawerOpen} onClose={() => setDrawerOpen(false)} />

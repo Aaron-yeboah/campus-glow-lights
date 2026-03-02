@@ -3,7 +3,10 @@ import { Lightbulb, Shield, QrCode, ArrowRight, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ugLogo from "@/assets/ug-logo.png";
 
+import DeveloperCredit from "@/components/DeveloperCredit";
+
 const Index = () => {
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero */}
@@ -60,6 +63,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t py-6 text-center text-xs text-muted-foreground">
         University of Ghana, Legon — Campus Glow © {new Date().getFullYear()}
+        <DeveloperCredit />
       </footer>
     </div>
   );
