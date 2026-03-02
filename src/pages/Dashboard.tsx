@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   AlertTriangle, CheckCircle, Wrench, Search, Eye, QrCode, LayoutDashboard,
   Activity, Clock, TrendingUp, Filter, ArrowUpDown, BarChart3, MapPin,
-  Trash2, PlusCircle, HelpCircle, FileText, User, History as HistoryIcon
+  Trash2, PlusCircle, HelpCircle, FileText, User, History as HistoryIcon,
+  Settings, LogOut
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,7 @@ import autoTable from "jspdf-autotable";
 import { generateReceiptHtml } from "@/lib/receipt-utils";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const { poles, loading, loadingRepairs, deletePole, repairs, deleteRepair, fetchRepairDetails } = usePoles();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
@@ -244,14 +246,34 @@ const Dashboard = () => {
               <p className="hidden sm:block text-[10px] opacity-75 mt-0.5 font-medium uppercase tracking-wider">Streetlight Management</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className="hidden md:flex items-center gap-2 text-[10px] opacity-75 font-bold uppercase tracking-widest mr-2">
               <Clock className="w-3.5 h-3.5" />
               {format(new Date(), "MMM d, yyyy h:mm a")}
             </div>
-            <Badge variant="outline" className="bg-white/5 border-white/20 text-white text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 h-6">
-              Admin Portal
-            </Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/dashboard/settings")}
+              className="text-white hover:bg-white/10 h-8 px-2 sm:px-3"
+              title="Settings"
+            >
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline ml-1.5 text-xs font-bold">Settings</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                sessionStorage.removeItem("admin_auth");
+                navigate("/admin-login", { replace: true });
+              }}
+              className="text-white hover:bg-white/10 h-8 px-2 sm:px-3"
+              title="Sign Out"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline ml-1.5 text-xs font-bold">Sign Out</span>
+            </Button>
           </div>
         </div>
       </header>

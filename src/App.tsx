@@ -9,6 +9,9 @@ import Dashboard from "./pages/Dashboard";
 import Report from "./pages/Report";
 import FAQ from "./pages/FAQ";
 import NotFound from "./pages/NotFound";
+import AdminLogin from "./pages/AdminLogin";
+import AdminSettings from "./pages/AdminSettings";
+import ProtectedRoute from "./components/ProtectedRoute";
 import MaintenanceLayout from "./pages/maintenance/MaintenanceLayout";
 import MaintenanceDashboard from "./pages/maintenance/Dashboard";
 import RepairForm from "./pages/maintenance/RepairForm";
@@ -25,9 +28,23 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/report" element={<Report />} />
             <Route path="/faq" element={<FAQ />} />
+
+            {/* Admin Login Gate */}
+            <Route path="/admin-login" element={<AdminLogin />} />
+
+            {/* Protected Admin Routes */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/settings" element={
+              <ProtectedRoute>
+                <AdminSettings />
+              </ProtectedRoute>
+            } />
 
             {/* Maintenance Portal */}
             <Route path="/maintenance" element={<MaintenanceLayout />}>
