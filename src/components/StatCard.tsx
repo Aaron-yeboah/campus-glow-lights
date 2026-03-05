@@ -4,7 +4,7 @@ interface StatCardProps {
   title: string;
   value: number | string;
   icon: LucideIcon;
-  variant: "destructive" | "success" | "default" | "warning";
+  variant: "destructive" | "success" | "default" | "warning" | "info" | "violet";
   subtitle?: string;
 }
 
@@ -12,6 +12,8 @@ const variantStyles = {
   destructive: "border-destructive/20 bg-destructive/5",
   success: "border-success/20 bg-success/5",
   warning: "border-warning/20 bg-warning/5",
+  info: "border-blue-500/20 bg-blue-50/50",
+  violet: "border-violet-500/20 bg-violet-50/50",
   default: "border-border bg-card",
 };
 
@@ -19,6 +21,8 @@ const iconStyles = {
   destructive: "bg-destructive/10 text-destructive",
   success: "bg-success/10 text-success",
   warning: "bg-warning/10 text-warning",
+  info: "bg-blue-100 text-blue-600",
+  violet: "bg-violet-100 text-violet-600",
   default: "bg-primary/10 text-primary",
 };
 
