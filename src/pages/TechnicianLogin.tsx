@@ -82,8 +82,8 @@ const TechnicianLogin = () => {
                             to="/"
                             className="inline-flex items-center gap-1.5 text-white/50 hover:text-white/80 text-xs font-bold uppercase tracking-widest transition-colors"
                         >
-                            <ArrowLeft className="w-3.5 h-3.5" />
-                            Back to Home
+                            <ArrowLeft className="w-4 h-4" />
+                            Back
                         </Link>
                     </div>
 
@@ -110,15 +110,19 @@ const TechnicianLogin = () => {
                         </div>
                     </div>
 
-                    {/* Mobile branding */}
-                    <div className="lg:hidden flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                        <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center backdrop-blur-md shadow-2xl">
-                            <img src={ugLogo} alt="UG Logo" className="w-7 h-7 object-contain" />
+                    {/* Mobile Branding & Title */}
+                    <div className="lg:hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        <div className="flex items-center gap-4 mb-3">
+                            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center backdrop-blur-md shadow-2xl">
+                                <img src={ugLogo} alt="UG Logo" className="w-7 h-7 object-contain" />
+                            </div>
+                            <div className="h-10 w-px bg-white/20" />
+                            <div>
+                                <h1 className="text-2xl font-display font-black text-white tracking-tight leading-none">Maintenance</h1>
+                                <p className="text-[10px] text-amber-400/60 font-bold uppercase tracking-[0.2em] mt-1">Technician Portal</p>
+                            </div>
                         </div>
-                        <div>
-                            <h1 className="text-2xl font-display font-black text-white tracking-tight drop-shadow-lg">Campus Glow</h1>
-                            <p className="text-[10px] text-amber-400/70 font-bold uppercase tracking-[0.2em]">Maintenance Portal</p>
-                        </div>
+                        <div className="h-1 w-12 bg-amber-500 rounded-full" />
                     </div>
 
                     <div className="hidden lg:block text-right">
