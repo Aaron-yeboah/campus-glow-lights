@@ -40,9 +40,13 @@ import { generateReceiptHtml } from "@/lib/receipt-utils";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { poles, loading, loadingRepairs, deletePole, repairs, deleteRepair, fetchRepairDetails, deleteReport } = usePoles();
-  // Expose deleteReport to window for the inline button in the summary list
+  const {
+    poles, loading, loadingRepairs, deletePole, repairs, deleteRepair,
+    fetchRepairDetails, deleteReport, deleteAllRepairs
+  } = usePoles();
+  // Expose methods to window for the inline buttons in the summary lists
   (window as any).deleteReport = deleteReport;
+  (window as any).deleteRepair = deleteRepair;
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [selectedPole, setSelectedPole] = useState<Pole | null>(null);

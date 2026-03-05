@@ -47,6 +47,8 @@ interface PoleContextType {
   deletePole: (id: string) => Promise<void>;
   deleteRepair: (id: string) => Promise<void>;
   deleteReport: (id: string) => Promise<void>;
+  deleteAllRepairs: () => Promise<void>;
+  deleteAllReports: () => Promise<void>;
   fetchReportDetails: (id: string) => Promise<{ photoUrl: string | null, description: string } | null>;
   fetchRepairDetails: (id: string) => Promise<{ before: string, after: string, notes: string } | null>;
   fetchPoleBeforePhoto: (id: string) => Promise<string | null>;
@@ -318,9 +320,35 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { error } = await supabase.from("reports").delete().eq("id", id);
       if (error) throw error;
-      // Local state will be updated by subscription on poles
+      // Subscription will handle state, but manual update for safety
+      setPoles(prev => prev.map(p => ({
+        ...p,
+        reports: p.reports.filter(r => r.id !== id)
+      })));
     } catch (error) {
       console.error("Error deleting report:", error);
+      throw error;
+    }
+  };
+
+  const deleteAllRepairs = async () => {
+    try {
+      const { error } = await supabase.from("repairs").delete().neq("id", "placeholder"); // Delete all
+      if (error) throw error;
+      setRepairs([]);
+    } catch (error) {
+      console.error("Error deleting all repairs:", error);
+      throw error;
+    }
+  };
+
+  const deleteAllReports = async () => {
+    try {
+      const { error } = await supabase.from("reports").delete().neq("id", "placeholder"); // Delete all
+      if (error) throw error;
+      setPoles(prev => prev.map(p => ({ ...p, reports: [] })));
+    } catch (error) {
+      console.error("Error deleting all reports:", error);
       throw error;
     }
   };
@@ -343,6 +371,8 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
       deletePole,
       deleteRepair,
       deleteReport,
+      deleteAllRepairs,
+      deleteAllReports,
       fetchReportDetails,
       fetchRepairDetails,
       fetchPoleBeforePhoto,

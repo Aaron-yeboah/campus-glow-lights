@@ -50,14 +50,36 @@ const MaintenanceHistory = () => {
                     <h2 className="text-2xl font-bold text-[#1A365D]">My Work History</h2>
                     <p className="text-sm text-slate-500 font-medium">Your completed maintenance actions.</p>
                 </div>
-                <div className="relative w-full md:w-72">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <Input
-                        placeholder="Search by Pole ID or Fault..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="pl-9 h-11 border-slate-200 focus-visible:ring-[#1A365D] rounded-lg"
-                    />
+                <div className="flex flex-col md:flex-row md:items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
+                    <div className="relative w-full md:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <Input
+                            placeholder="Search by Pole ID or Fault..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="pl-9 h-11 border-slate-200 focus-visible:ring-[#1A365D] rounded-lg"
+                        />
+                    </div>
+                    {(window as any).deleteAllRepairs && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-11 px-4 text-destructive border-destructive/20 hover:bg-destructive/10 font-bold uppercase tracking-tight"
+                            onClick={async () => {
+                                if (confirm("Clear your entire work history? This action is permanent.")) {
+                                    try {
+                                        await (window as any).deleteAllRepairs();
+                                        toast.success("History cleared");
+                                    } catch (err) {
+                                        toast.error("Failed to clear history");
+                                    }
+                                }
+                            }}
+                        >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Clear History
+                        </Button>
+                    )}
                 </div>
             </div>
 
