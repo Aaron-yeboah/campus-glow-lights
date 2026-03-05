@@ -405,7 +405,7 @@ const Dashboard = () => {
                 <StatCard title="Active Faults" value={activeFaults} icon={AlertTriangle} variant="destructive" subtitle={`${criticalFaults} critical`} />
                 <StatCard title="Operational" value={operational} icon={CheckCircle} variant="success" subtitle={`${healthPercent}% health`} />
                 <StatCard title="Total Poles" value={poles.length} icon={Activity} variant="default" subtitle="All zones" />
-                <StatCard title="Total Technicians" value={technicians.length} icon={Users} variant="default" subtitle="Active crew" />
+                <StatCard title="Total Technicians" value={technicians.length} icon={Users} variant="warning" subtitle="Active crew" />
                 <StatCard title="Total Reports" value={totalReports} icon={TrendingUp} variant="warning" subtitle="All time" />
                 <StatCard title="Total Repairs" value={totalRepairs} icon={Wrench} variant="default" subtitle="Completed fixes" />
               </div>
