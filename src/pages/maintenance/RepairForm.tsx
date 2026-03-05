@@ -158,7 +158,7 @@ const RepairForm = () => {
 
             await submitRepair({
                 poleId,
-                techName: "Isaac Asiedu",
+                techName: sessionStorage.getItem("tech_name") || "Unknown Technician",
                 faultCategory,
                 workNotes,
                 beforePhotoUrl: beforePhoto,
