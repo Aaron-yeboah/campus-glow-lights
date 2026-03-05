@@ -64,12 +64,10 @@ const Dashboard = () => {
   const [addingTech, setAddingTech] = useState(false);
   const [showTechPassword, setShowTechPassword] = useState(false);
 
-  // Fetch technicians when maintenance tab is active
+  // Fetch technicians on mount and when maintenance tab is active
   useEffect(() => {
-    if (activeTab === "maintenance") {
-      fetchTechnicians();
-    }
-  }, [activeTab]);
+    fetchTechnicians();
+  }, []);
 
   const fetchTechnicians = async () => {
     setLoadingTechs(true);
@@ -403,10 +401,11 @@ const Dashboard = () => {
 
             <TabsContent value="dashboard" className="space-y-6">
               {/* Stats */}
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                 <StatCard title="Active Faults" value={activeFaults} icon={AlertTriangle} variant="destructive" subtitle={`${criticalFaults} critical`} />
                 <StatCard title="Operational" value={operational} icon={CheckCircle} variant="success" subtitle={`${healthPercent}% health`} />
                 <StatCard title="Total Poles" value={poles.length} icon={Activity} variant="default" subtitle="All zones" />
+                <StatCard title="Total Technicians" value={technicians.length} icon={Users} variant="default" subtitle="Active crew" />
                 <StatCard title="Total Reports" value={totalReports} icon={TrendingUp} variant="warning" subtitle="All time" />
                 <StatCard title="Total Repairs" value={totalRepairs} icon={Wrench} variant="default" subtitle="Completed fixes" />
               </div>
