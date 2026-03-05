@@ -46,6 +46,7 @@ interface PoleContextType {
   addPole: (pole: Partial<Pole>) => Promise<void>;
   deletePole: (id: string) => Promise<void>;
   deleteRepair: (id: string) => Promise<void>;
+  deleteReport: (id: string) => Promise<void>;
   fetchReportDetails: (id: string) => Promise<{ photoUrl: string | null, description: string } | null>;
   fetchRepairDetails: (id: string) => Promise<{ before: string, after: string, notes: string } | null>;
   fetchPoleBeforePhoto: (id: string) => Promise<string | null>;
@@ -313,6 +314,17 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const deleteReport = async (id: string) => {
+    try {
+      const { error } = await supabase.from("reports").delete().eq("id", id);
+      if (error) throw error;
+      // Local state will be updated by subscription on poles
+    } catch (error) {
+      console.error("Error deleting report:", error);
+      throw error;
+    }
+  };
+
   const fetchPoleBeforePhoto = async (id: string) => {
     const { data, error } = await supabase.from("poles").select("current_repair_before_photo").eq("id", id).single();
     if (error) return null;
@@ -330,6 +342,7 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
       addPole,
       deletePole,
       deleteRepair,
+      deleteReport,
       fetchReportDetails,
       fetchRepairDetails,
       fetchPoleBeforePhoto,
