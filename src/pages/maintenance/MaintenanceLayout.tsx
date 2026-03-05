@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation } from "react-router-dom";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import {
     LayoutDashboard, History, ShieldAlert,
     Settings, LogOut, Wrench
@@ -9,6 +9,10 @@ import DeveloperCredit from "@/components/DeveloperCredit";
 
 const MaintenanceLayout = () => {
     const location = useLocation();
+    const navigate = useNavigate();
+
+    const techName = sessionStorage.getItem("tech_name") || "Technician";
+    const techInitials = techName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
 
     const navItems = [
         { label: "Tasks", icon: LayoutDashboard, path: "/maintenance" },
@@ -16,6 +20,14 @@ const MaintenanceLayout = () => {
     ];
 
     const activePath = (path: string) => location.pathname === path;
+
+    const handleLogout = () => {
+        sessionStorage.removeItem("tech_auth");
+        sessionStorage.removeItem("tech_name");
+        sessionStorage.removeItem("tech_id");
+        sessionStorage.removeItem("tech_zone");
+        navigate("/tech-login", { replace: true });
+    };
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
@@ -54,22 +66,20 @@ const MaintenanceLayout = () => {
                 <div className="mt-auto p-6 space-y-4 border-t border-white/10">
                     <div className="flex items-center gap-3 px-4 py-3 bg-white/5 rounded-xl border border-white/10">
                         <div className="w-10 h-10 bg-success/20 rounded-full flex items-center justify-center border border-success/30">
-                            <span className="text-xs font-black text-success">IA</span>
+                            <span className="text-xs font-black text-success">{techInitials}</span>
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-xs font-black truncate">Isaac Asiedu</p>
+                            <p className="text-xs font-black truncate">{techName}</p>
                             <p className="text-[10px] text-white/40 font-bold">Field Technician</p>
                         </div>
                     </div>
                     <Button
-                        asChild
                         variant="ghost"
                         className="w-full justify-start text-white/60 hover:text-white hover:bg-white/10 rounded-xl px-6 py-5 gap-4"
+                        onClick={handleLogout}
                     >
-                        <Link to="/">
-                            <LogOut className="w-4 h-4" />
-                            <span className="text-sm font-bold">Return to Site</span>
-                        </Link>
+                        <LogOut className="w-4 h-4" />
+                        <span className="text-sm font-bold">Logout</span>
                     </Button>
                 </div>
             </aside>
@@ -83,7 +93,7 @@ const MaintenanceLayout = () => {
                     <h1 className="text-xs font-black tracking-tight uppercase">Portal</h1>
                 </div>
                 <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 bg-success/30 rounded-full flex items-center justify-center text-[9px] font-black border border-success/50">IA</div>
+                    <div className="w-7 h-7 bg-success/30 rounded-full flex items-center justify-center text-[9px] font-black border border-success/50">{techInitials}</div>
                 </div>
             </header>
 
@@ -113,13 +123,13 @@ const MaintenanceLayout = () => {
                         <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
                     </Link>
                 ))}
-                <Link
-                    to="/"
+                <button
+                    onClick={handleLogout}
                     className="flex flex-col items-center gap-1.5 px-6 py-2.5 rounded-xl text-slate-400"
                 >
                     <LogOut className="w-6 h-6" />
                     <span className="text-[10px] font-black uppercase tracking-widest">Logout</span>
-                </Link>
+                </button>
             </nav>
             {/* Spacer for bottom nav on mobile */}
             <div className="h-20 md:hidden" />

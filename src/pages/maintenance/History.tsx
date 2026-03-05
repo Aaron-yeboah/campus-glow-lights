@@ -21,13 +21,17 @@ const MaintenanceHistory = () => {
     const [search, setSearch] = useState("");
     const [processingReceipt, setProcessingReceipt] = useState(false);
 
+    // Only show this technician's repairs
+    const techName = sessionStorage.getItem("tech_name") || "";
+
     const filteredFixes = useMemo(() => {
-        return repairs.filter((f) =>
-            f.poleId.toLowerCase().includes(search.toLowerCase()) ||
-            f.techName.toLowerCase().includes(search.toLowerCase()) ||
-            f.faultCategory.toLowerCase().includes(search.toLowerCase())
-        );
-    }, [repairs, search]);
+        return repairs
+            .filter((f) => f.techName.toLowerCase() === techName.toLowerCase())
+            .filter((f) =>
+                f.poleId.toLowerCase().includes(search.toLowerCase()) ||
+                f.faultCategory.toLowerCase().includes(search.toLowerCase())
+            );
+    }, [repairs, search, techName]);
 
     if (loadingRepairs) {
         return <LoadingScreen message="Loading history records..." />;
@@ -38,13 +42,13 @@ const MaintenanceHistory = () => {
             {/* Search & Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold text-[#1A365D]">History & Records</h2>
-                    <p className="text-sm text-slate-500 font-medium">Archive of all completed maintenance actions.</p>
+                    <h2 className="text-2xl font-bold text-[#1A365D]">My Work History</h2>
+                    <p className="text-sm text-slate-500 font-medium">Your completed maintenance actions.</p>
                 </div>
                 <div className="relative w-full md:w-72">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <Input
-                        placeholder="Search by ID, Tech, or Fault..."
+                        placeholder="Search by Pole ID or Fault..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className="pl-9 h-11 border-slate-200 focus-visible:ring-[#1A365D] rounded-lg"
@@ -54,9 +58,9 @@ const MaintenanceHistory = () => {
 
             <div className="flex items-center gap-2 mb-2">
                 <Badge variant="outline" className="bg-slate-100 text-[#1A365D] border-slate-200">
-                    Showing {filteredFixes.length} Recent Fixes
+                    {filteredFixes.length} Completed Repairs
                 </Badge>
-                <span className="text-[10px] uppercase font-black tracking-widest text-slate-400">Archived Records</span>
+                <span className="text-[10px] uppercase font-black tracking-widest text-slate-400">Personal Records</span>
             </div>
 
             {/* Table Container */}

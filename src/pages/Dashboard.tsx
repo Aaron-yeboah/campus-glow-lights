@@ -4,7 +4,8 @@ import {
   AlertTriangle, CheckCircle, Wrench, Search, Eye, QrCode, LayoutDashboard,
   Activity, Clock, TrendingUp, Filter, ArrowUpDown, BarChart3, MapPin,
   Trash2, PlusCircle, HelpCircle, FileText, User, History as HistoryIcon,
-  Settings, LogOut
+  Settings, LogOut, Users, UserPlus, Phone, MapPinned,
+  Eye as EyeIcon, EyeOff
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,9 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import {
+  Dialog, DialogContent, DialogTitle, DialogDescription
+} from "@/components/ui/dialog";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
@@ -50,6 +54,86 @@ const Dashboard = () => {
 
   const handleTabChange = (val: string) => {
     setSearchParams({ tab: val });
+  };
+
+  // Technician management state
+  const [technicians, setTechnicians] = useState<any[]>([]);
+  const [loadingTechs, setLoadingTechs] = useState(false);
+  const [showAddTech, setShowAddTech] = useState(false);
+  const [newTech, setNewTech] = useState({ name: "", employee_id: "", phone: "", zone: "", password: "tech123" });
+  const [addingTech, setAddingTech] = useState(false);
+  const [showTechPassword, setShowTechPassword] = useState(false);
+
+  // Fetch technicians when maintenance tab is active
+  useEffect(() => {
+    if (activeTab === "maintenance") {
+      fetchTechnicians();
+    }
+  }, [activeTab]);
+
+  const fetchTechnicians = async () => {
+    setLoadingTechs(true);
+    try {
+      const { data, error } = await supabase
+        .from("technicians")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setTechnicians(data || []);
+    } catch (err) {
+      console.error("Failed to fetch technicians:", err);
+    } finally {
+      setLoadingTechs(false);
+    }
+  };
+
+  const handleAddTechnician = async () => {
+    if (!newTech.name || !newTech.employee_id) {
+      toast.error("Name and Employee ID are required.");
+      return;
+    }
+    setAddingTech(true);
+    try {
+      const { error } = await supabase
+        .from("technicians")
+        .insert([{
+          name: newTech.name,
+          employee_id: newTech.employee_id,
+          phone: newTech.phone,
+          zone: newTech.zone,
+          password: newTech.password || "tech123",
+        }]);
+      if (error) throw error;
+      toast.success(`Technician ${newTech.name} onboarded!`, {
+        className: "bg-[#1A365D] text-white border-none shadow-xl"
+      });
+      setNewTech({ name: "", employee_id: "", phone: "", zone: "", password: "tech123" });
+      setShowAddTech(false);
+      fetchTechnicians();
+    } catch (err: any) {
+      if (err?.code === "23505") {
+        toast.error("Employee ID already exists.");
+      } else {
+        toast.error("Failed to add technician.");
+      }
+    } finally {
+      setAddingTech(false);
+    }
+  };
+
+  const handleDeleteTechnician = async (id: string, name: string) => {
+    if (!confirm(`Remove technician ${name}?`)) return;
+    try {
+      const { error } = await supabase
+        .from("technicians")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+      toast.success(`${name} removed.`);
+      fetchTechnicians();
+    } catch (err) {
+      toast.error("Failed to remove technician.");
+    }
   };
 
   const activeFaults = poles.filter((p) => p.status === "Defective").length;
@@ -752,6 +836,176 @@ const Dashboard = () => {
                   ))}
                 </div>
               </div>
+
+              {/* Technician Onboarding Section */}
+              <div className="rounded-xl border bg-card">
+                <div className="p-4 border-b flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-muted-foreground" />
+                    <h2 className="font-display font-semibold text-foreground">Technician Registry</h2>
+                  </div>
+                  <div className="flex sm:ml-auto gap-2 w-full sm:w-auto">
+                    <Button
+                      onClick={() => setShowAddTech(true)}
+                      className="flex-1 sm:flex-none bg-[#1A365D] hover:bg-[#1A365D]/90 text-white font-bold h-10 px-4 rounded-lg shadow-sm gap-2 border-none"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      <span className="text-xs">Add Technician</span>
+                    </Button>
+                  </div>
+                </div>
+
+                {loadingTechs ? (
+                  <div className="p-12 text-center">
+                    <p className="text-sm text-muted-foreground animate-pulse">Loading technicians...</p>
+                  </div>
+                ) : technicians.length === 0 ? (
+                  <div className="p-12 text-center space-y-3">
+                    <Users className="w-10 h-10 text-muted-foreground/30 mx-auto" />
+                    <p className="text-sm text-muted-foreground">No technicians onboarded yet.</p>
+                    <Button onClick={() => setShowAddTech(true)} variant="outline" size="sm" className="gap-2">
+                      <UserPlus className="w-3.5 h-3.5" /> Onboard First Technician
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    {/* Desktop Table */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b bg-muted/50 text-[10px] uppercase font-bold text-muted-foreground">
+                            <th className="text-left px-6 py-4">Name</th>
+                            <th className="text-left px-6 py-4">Employee ID</th>
+                            <th className="text-left px-6 py-4">Zone</th>
+                            <th className="text-left px-6 py-4">Phone</th>
+                            <th className="text-left px-6 py-4">Joined</th>
+                            <th className="text-right px-6 py-4">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {technicians.map((tech) => (
+                            <tr key={tech.id} className="hover:bg-muted/30 transition-colors">
+                              <td className="px-6 py-4 text-xs font-bold">{tech.name}</td>
+                              <td className="px-6 py-4 text-xs font-mono font-bold">{tech.employee_id}</td>
+                              <td className="px-6 py-4 text-xs text-muted-foreground">{tech.zone || "—"}</td>
+                              <td className="px-6 py-4 text-xs text-muted-foreground">{tech.phone || "—"}</td>
+                              <td className="px-6 py-4 text-xs text-muted-foreground">
+                                {tech.created_at ? format(new Date(tech.created_at), "MMM d, yyyy") : "—"}
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <Button
+                                  variant="ghost" size="sm" className="h-8 text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleDeleteTechnician(tech.id, tech.name)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {/* Mobile View */}
+                    <div className="md:hidden divide-y divide-border">
+                      {technicians.map((tech) => (
+                        <div key={tech.id} className="p-4 space-y-2">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="text-xs font-bold">{tech.name}</p>
+                              <p className="text-[10px] font-mono text-muted-foreground">{tech.employee_id}</p>
+                            </div>
+                            <Button
+                              variant="ghost" size="sm" className="h-7 text-destructive"
+                              onClick={() => handleDeleteTechnician(tech.id, tech.name)}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                          <div className="flex gap-4 text-[10px] text-muted-foreground">
+                            {tech.zone && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{tech.zone}</span>}
+                            {tech.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{tech.phone}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Add Technician Dialog */}
+              <Dialog open={showAddTech} onOpenChange={setShowAddTech}>
+                <DialogContent className="sm:max-w-md bg-white rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
+                  <div className="bg-[#1A365D] p-6 text-white">
+                    <DialogTitle className="text-xl font-black uppercase tracking-tight">Onboard Technician</DialogTitle>
+                    <DialogDescription className="text-white/60 text-xs font-bold uppercase tracking-widest mt-1">
+                      Register a new field technician
+                    </DialogDescription>
+                  </div>
+                  <div className="p-6 space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Full Name *</label>
+                      <Input
+                        value={newTech.name}
+                        onChange={e => setNewTech(p => ({ ...p, name: e.target.value }))}
+                        placeholder="e.g. Isaac Asiedu"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Employee ID *</label>
+                      <Input
+                        value={newTech.employee_id}
+                        onChange={e => setNewTech(p => ({ ...p, employee_id: e.target.value }))}
+                        placeholder="e.g. TECH-001"
+                        className="font-mono"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Phone</label>
+                        <Input
+                          value={newTech.phone}
+                          onChange={e => setNewTech(p => ({ ...p, phone: e.target.value }))}
+                          placeholder="024-XXX-XXXX"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Assigned Zone</label>
+                        <Input
+                          value={newTech.zone}
+                          onChange={e => setNewTech(p => ({ ...p, zone: e.target.value }))}
+                          placeholder="e.g. Legon Campus"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Login Password</label>
+                      <div className="relative">
+                        <Input
+                          type={showTechPassword ? "text" : "password"}
+                          value={newTech.password}
+                          onChange={e => setNewTech(p => ({ ...p, password: e.target.value }))}
+                          placeholder="Default: tech123"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowTechPassword(v => !v)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors"
+                        >
+                          {showTechPassword ? <EyeOff className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-slate-400">Technician will use this password with their Employee ID to log in.</p>
+                    </div>
+                    <Button
+                      disabled={addingTech || !newTech.name || !newTech.employee_id}
+                      onClick={handleAddTechnician}
+                      className="w-full bg-[#1A365D] hover:bg-[#1A365D]/90 text-white font-bold h-11 rounded-xl"
+                    >
+                      {addingTech ? "Registering..." : "Register Technician"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </TabsContent>
           </Tabs>
         )}

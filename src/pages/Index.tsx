@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Lightbulb, Shield, QrCode, ArrowRight, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ugLogo from "@/assets/ug-logo.png";
+import legonBg from "@/assets/legon.jpg";
 
 import DeveloperCredit from "@/components/DeveloperCredit";
 
@@ -10,10 +11,20 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero */}
-      <div className="bg-primary text-primary-foreground">
-        <div className="max-w-5xl mx-auto px-4 py-16 sm:py-24 text-center">
-          <img src={ugLogo} alt="University of Ghana" className="w-20 h-20 mx-auto mb-6 object-contain" />
-          <h1 className="text-4xl sm:text-5xl font-display font-bold mb-4">Campus Glow</h1>
+      <div className="relative bg-primary text-primary-foreground overflow-hidden">
+        {/* Background Image with Overlay */}
+        <div className="absolute inset-0 z-0">
+          <img
+            src={legonBg}
+            alt="University of Ghana Campus"
+            className="w-full h-full object-cover opacity-60 scale-105 active:scale-100 transition-transform duration-700"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#1A365D]/80 via-[#1A365D]/60 to-[#1A365D]/85 z-10" />
+        </div>
+
+        <div className="relative z-20 max-w-5xl mx-auto px-4 py-16 sm:py-32 text-center">
+          <img src={ugLogo} alt="University of Ghana" className="w-24 h-24 mx-auto mb-8 object-contain drop-shadow-2xl" />
+          <h1 className="text-4xl sm:text-6xl font-display font-black mb-6 tracking-tight">Campus Glow</h1>
           <p className="text-lg sm:text-xl opacity-85 max-w-2xl mx-auto mb-8">
             University of Ghana's smart streetlight management system. Report faults instantly. Track repairs in real-time.
           </p>
@@ -31,7 +42,7 @@ const Index = () => {
               </Link>
             </Button>
             <Button asChild size="lg" variant="secondary" className="font-semibold bg-[#1A365D] text-white hover:bg-[#1A365D]/90 border border-white/20">
-              <Link to="/maintenance">
+              <Link to="/tech-login">
                 <Wrench className="w-5 h-5 mr-2" />
                 Maintenance Portal
                 <ArrowRight className="w-4 h-4 ml-2" />

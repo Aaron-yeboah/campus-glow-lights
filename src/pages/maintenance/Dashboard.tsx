@@ -120,7 +120,14 @@ const MaintenanceDashboard = () => {
                 p.id.toLowerCase().includes(search.toLowerCase()) ||
                 p.zone.toLowerCase().includes(search.toLowerCase())
             )
-            .sort((a, b) => b.daysOutage - a.daysOutage); // Sort by urgency (days outage)
+            .sort((a, b) => {
+                // Priority 1: "In Progress" first
+                if (a.status === "In Progress" && b.status !== "In Progress") return -1;
+                if (a.status !== "In Progress" && b.status === "In Progress") return 1;
+
+                // Priority 2: Days Outage (highest first)
+                return b.daysOutage - a.daysOutage;
+            });
     }, [poles, search]);
 
     const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -220,7 +227,10 @@ const MaintenanceDashboard = () => {
                 <Badge variant="outline" className="bg-slate-100 text-[#1A365D] border-slate-200">
                     Showing {defectivePoles.length} Assigned Tasks
                 </Badge>
-                <span className="text-[10px] uppercase font-black tracking-widest text-slate-400">Sorted by Urgency</span>
+                <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] uppercase font-black tracking-widest text-[#1A365D]">Status Priority</span>
+                    <span className="text-[9px] uppercase font-bold tracking-tight text-slate-400">In Progress {" > "} Outage Urgency</span>
+                </div>
             </div>
 
             {/* Task List */}
