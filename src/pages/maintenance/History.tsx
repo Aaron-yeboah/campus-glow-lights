@@ -25,8 +25,13 @@ const MaintenanceHistory = () => {
     const techName = sessionStorage.getItem("tech_name") || "";
 
     const filteredFixes = useMemo(() => {
+        const normalizedTechName = (techName || "").trim().toLowerCase();
+
         return repairs
-            .filter((f) => f.techName.toLowerCase() === techName.toLowerCase())
+            .filter((f) => {
+                const repairTech = (f.techName || "").trim().toLowerCase();
+                return repairTech === normalizedTechName;
+            })
             .filter((f) =>
                 f.poleId.toLowerCase().includes(search.toLowerCase()) ||
                 f.faultCategory.toLowerCase().includes(search.toLowerCase())
