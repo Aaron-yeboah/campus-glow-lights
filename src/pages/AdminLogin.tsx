@@ -107,7 +107,7 @@ const AdminLogin = () => {
                 <img
                     src={adminBg}
                     alt="University of Ghana Campus"
-                    className="absolute inset-0 w-full h-full object-cover object-[center_35%] lg:object-[35%_center]"
+                    className="absolute inset-0 w-full h-full object-cover object-[center_bottom] lg:object-[35%_center]"
                 />
                 {/* Navy Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-b lg:bg-gradient-to-r from-[#0f1c2e]/80 via-[#1A365D]/70 to-[#0f1c2e]/90 lg:from-[#0f1c2e]/90 lg:via-[#1A365D]/80 lg:to-[#0f1c2e]/95" />
