@@ -66,14 +66,14 @@ const TechnicianLogin = () => {
     return (
         <div className="min-h-screen flex flex-col lg:flex-row-reverse">
             {/* Image Side — Right on Desktop, Top on Mobile */}
-            <div className="relative lg:w-1/2 h-56 sm:h-72 lg:h-auto lg:min-h-screen overflow-hidden">
+            <div className="relative lg:w-1/2 min-h-[40vh] sm:min-h-[45vh] lg:h-auto lg:min-h-screen overflow-hidden">
                 <img
                     src={techBg}
                     alt="University of Ghana Campus"
-                    className="absolute inset-0 w-full h-full object-cover object-[70%_top] lg:object-[65%_top]"
+                    className="absolute inset-0 w-full h-full object-cover object-[center_top] lg:object-[65%_top]"
                 />
                 {/* Navy + Amber tinted Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-b lg:bg-gradient-to-l from-[#0f1c2e]/90 via-[#1A365D]/75 to-[#0f1c2e]/95" />
+                <div className="absolute inset-0 bg-gradient-to-b lg:bg-gradient-to-l from-[#0f1c2e]/80 via-[#1A365D]/65 to-[#0f1c2e]/90 lg:from-[#0f1c2e]/90 lg:via-[#1A365D]/75 lg:to-[#0f1c2e]/95" />
 
                 {/* Overlay Content */}
                 <div className="relative z-10 flex flex-col justify-between h-full p-6 sm:p-8 lg:p-12">
@@ -111,13 +111,13 @@ const TechnicianLogin = () => {
                     </div>
 
                     {/* Mobile branding */}
-                    <div className="lg:hidden flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-400/20 flex items-center justify-center backdrop-blur-sm">
-                            <img src={ugLogo} alt="UG Logo" className="w-6 h-6 object-contain" />
+                    <div className="lg:hidden flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center backdrop-blur-md shadow-2xl">
+                            <img src={ugLogo} alt="UG Logo" className="w-7 h-7 object-contain" />
                         </div>
                         <div>
-                            <h1 className="text-xl font-display font-black text-white tracking-tight">Campus Glow</h1>
-                            <p className="text-[9px] text-amber-400/60 font-bold uppercase tracking-[0.15em]">Maintenance Portal</p>
+                            <h1 className="text-2xl font-display font-black text-white tracking-tight drop-shadow-lg">Campus Glow</h1>
+                            <p className="text-[10px] text-amber-400/70 font-bold uppercase tracking-[0.2em]">Maintenance Portal</p>
                         </div>
                     </div>
 
@@ -130,19 +130,19 @@ const TechnicianLogin = () => {
             </div>
 
             {/* Form Side — Left on Desktop, Bottom on Mobile */}
-            <div className="flex-1 bg-[#0f1c2e] flex items-center justify-center p-6 sm:p-8 lg:p-12 relative overflow-hidden">
+            <div className="flex-1 bg-[#0f1c2e] flex items-center justify-center p-6 sm:p-10 lg:p-12 relative overflow-hidden -mt-6 lg:mt-0 rounded-t-3xl lg:rounded-none z-20">
                 {/* Decorative Background */}
                 <div className="absolute inset-0 pointer-events-none overflow-hidden">
                     {/* Amber-tinted glowing orbs */}
-                    <div className="absolute -top-24 -left-24 w-80 h-80 rounded-full bg-amber-500/[0.05] blur-[80px]" />
-                    <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-[#1A365D]/20 blur-[100px]" />
-                    <div className="absolute top-1/3 left-1/4 w-48 h-48 rounded-full bg-amber-400/[0.03] blur-[60px]" />
+                    <div className="absolute -top-24 -left-24 w-80 h-80 rounded-full bg-amber-500/[0.08] blur-[80px]" />
+                    <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-[#1A365D]/30 blur-[100px]" />
+                    <div className="absolute top-1/3 left-1/4 w-48 h-48 rounded-full bg-amber-400/[0.05] blur-[60px]" />
                     {/* Subtle grid pattern */}
-                    <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '40px 40px' }} />
+                    <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '40px 40px' }} />
                     {/* Floating accent rings */}
-                    <div className="absolute top-16 left-16 w-32 h-32 rounded-full border border-amber-400/[0.05]" />
-                    <div className="absolute bottom-24 right-12 w-20 h-20 rounded-full border border-white/[0.03]" />
-                    <div className="absolute top-1/2 left-8 w-12 h-12 rounded-full border border-amber-400/[0.06]" />
+                    <div className="absolute top-16 left-16 w-32 h-32 rounded-full border border-amber-400/[0.08]" />
+                    <div className="absolute bottom-24 right-12 w-20 h-20 rounded-full border border-white/[0.04]" />
+                    <div className="absolute top-1/2 left-8 w-12 h-12 rounded-full border border-amber-400/[0.08]" />
                 </div>
                 <div className="w-full max-w-sm space-y-6">
                     {/* Login Card */}
