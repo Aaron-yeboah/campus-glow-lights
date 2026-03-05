@@ -532,7 +532,12 @@ const Dashboard = () => {
                                 className="text-destructive hover:bg-destructive/10"
                                 onClick={() => {
                                   if (confirm(`Delete pole ${pole.id}?`)) {
-                                    deletePole(pole.id).then(() => toast.success("Pole deleted"));
+                                    deletePole(pole.id)
+                                      .then(() => toast.success("Pole deleted successfully"))
+                                      .catch((err) => {
+                                        console.error("Delete error:", err);
+                                        toast.error(`Could not delete pole: ${err.message || "Unknown error"}. Ensure there are no active reports or repairs linked to it.`);
+                                      });
                                   }
                                 }}
                               >
