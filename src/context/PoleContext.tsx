@@ -286,8 +286,13 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
 
   const deletePole = async (id: string) => {
     try {
+      // First, delete associated reports and repairs to avoid foreign key constraints
+      await supabase.from("reports").delete().eq("pole_id", id);
+      await supabase.from("repairs").delete().eq("pole_id", id);
+
       const { error } = await supabase.from("poles").delete().eq("id", id);
       if (error) throw error;
+
       // Local state will be updated by subscription, but manual filter ensures immediate UI feedback
       setPoles(prev => prev.filter(p => p.id !== id));
     } catch (error) {
