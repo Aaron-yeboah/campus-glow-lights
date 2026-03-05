@@ -17,9 +17,9 @@ const Index = () => {
           <img
             src={legonBg}
             alt="University of Ghana Campus"
-            className="w-full h-full object-cover opacity-60 scale-105 active:scale-100 transition-transform duration-700"
+            className="w-full h-full object-cover opacity-70 scale-105 active:scale-100 transition-transform duration-700"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#1A365D]/80 via-[#1A365D]/60 to-[#1A365D]/85 z-10" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#1A365D]/90 via-[#1A365D]/70 to-[#1A365D]/90 z-10" />
         </div>
 
         <div className="relative z-20 max-w-5xl mx-auto px-4 py-16 sm:py-32 text-center">
