@@ -121,9 +121,13 @@ const MaintenanceDashboard = () => {
             .filter((p) => p.status === "Defective" || p.status === "In Progress")
             .filter((p) => {
                 const assignment = assignments[p.id];
-                if (!assignment) return false;
-                const matchesId = currentTechId && assignment.techId === currentTechId;
-                const matchesName = currentTechName && assignment.techName.trim().toLowerCase() === currentTechName.trim().toLowerCase();
+                const techId = p.assignedTechId || assignment?.techId;
+                const techName = p.assignedTechName || assignment?.techName;
+
+                if (!techId && !techName) return false;
+
+                const matchesId = currentTechId && techId === currentTechId;
+                const matchesName = currentTechName && techName && techName.trim().toLowerCase() === currentTechName.trim().toLowerCase();
                 return Boolean(matchesId || matchesName);
             })
             .filter((p) =>
@@ -263,15 +267,20 @@ const MaintenanceDashboard = () => {
                                             {pole.zone}
                                         </div>
                                     </div>
-                                    {status === "Defective" ? (
-                                        <Badge className="bg-red-50 text-red-600 border border-red-100 hover:bg-red-50 text-[10px] font-black uppercase tracking-tighter px-2">
-                                            Defective
+                                    <div className="flex flex-col items-end gap-1">
+                                        <Badge variant="outline" className="bg-blue-50 text-[#1A365D] border-blue-200 text-[10px] font-bold">
+                                            Assigned to You
                                         </Badge>
-                                    ) : (
-                                        <Badge className="bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-50 text-[10px] font-black uppercase tracking-tighter px-2">
-                                            In Progress
-                                        </Badge>
-                                    )}
+                                        {status === "Defective" ? (
+                                            <Badge className="bg-red-50 text-red-600 border border-red-100 hover:bg-red-50 text-[10px] font-black uppercase tracking-tighter px-2">
+                                                Defective
+                                            </Badge>
+                                        ) : (
+                                            <Badge className="bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-50 text-[10px] font-black uppercase tracking-tighter px-2">
+                                                In Progress
+                                            </Badge>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="space-y-2">
@@ -323,10 +332,9 @@ const MaintenanceDashboard = () => {
                             <CheckCircle className="w-8 h-8 text-emerald-500" />
                         </div>
                         <div>
-                            <h3 className="text-lg font-bold text-[#1A365D]">No Pending Jobs Assigned</h3>
+                            <h3 className="text-lg font-bold text-[#1A365D]">No Assigned Outages</h3>
                             <p className="text-sm text-slate-500 max-w-md mx-auto">
-                                {currentTechName ? `Hello ${currentTechName}, you currently have no assigned maintenance tasks.` : "You currently have no assigned maintenance tasks."}
-                                {" "}When the administrator assigns defective streetlights to your account, they will appear here automatically.
+                                {currentTechName ? `Hello ${currentTechName}, you have no pending maintenance jobs assigned by the administrator at this time. Check back later.` : "You have no pending maintenance jobs assigned by the administrator at this time. Check back later."}
                             </p>
                         </div>
                     </div>

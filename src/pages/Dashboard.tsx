@@ -512,7 +512,7 @@ const Dashboard = () => {
                           <td className="px-4 py-3">
                             {pole.status !== "Operational" ? (
                               <Select
-                                value={assignments[pole.id]?.techId || "unassigned"}
+                                value={pole.assignedTechId || assignments[pole.id]?.techId || "unassigned"}
                                 onValueChange={async (val) => {
                                   if (val === "unassigned") {
                                     await assignJob(pole.id, null, null);

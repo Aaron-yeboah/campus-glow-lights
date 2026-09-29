@@ -22,6 +22,9 @@ export interface Pole {
   installDate: Date;
   reports: FaultReport[];
   beforePhoto?: string; // Temp storage for "In Progress" states
+  assignedTechId?: string | null;
+  assignedTechName?: string | null;
+  assignedAt?: Date | null;
 }
 
 export interface Repair {
@@ -87,7 +90,7 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
       if (data?.value) {
         try {
           const parsed = JSON.parse(data.value);
-          setAssignments(parsed || {});
+          setAssignments((prev) => ({ ...parsed, ...prev }));
         } catch (e) {
           console.error("Failed to parse job_assignments JSON:", e);
         }
@@ -99,38 +102,55 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
 
   const assignJob = async (poleId: string, techId: string | null, techName: string | null) => {
     try {
-      const updated = { ...assignments };
-      if (techId && techName) {
-        updated[poleId] = {
-          techId,
-          techName,
-          assignedAt: new Date().toISOString(),
-        };
-      } else {
-        delete updated[poleId];
-      }
+      const now = techId ? new Date().toISOString() : null;
 
-      setAssignments(updated);
+      // 1. Update poles table in Supabase PostgreSQL
+      const { error: poleErr } = await supabase
+        .from("poles")
+        .update({
+          assigned_tech_id: techId,
+          assigned_tech_name: techName,
+          assigned_at: now,
+        })
+        .eq("id", poleId);
 
-      const now = new Date().toISOString();
-      const { data: existing } = await supabase
-        .from("admin_settings")
-        .select("id")
-        .eq("key", "job_assignments")
-        .maybeSingle();
+      if (poleErr) throw poleErr;
 
-      if (existing) {
-        const { error } = await supabase
+      // 2. Optimistic local state update for poles
+      setPoles((prev) =>
+        prev.map((p) =>
+          p.id === poleId
+            ? {
+                ...p,
+                assignedTechId: techId,
+                assignedTechName: techName,
+                assignedAt: now ? new Date(now) : null,
+              }
+            : p
+        )
+      );
+
+      // 3. Update assignments map for context access
+      setAssignments((prev) => {
+        const updated = { ...prev };
+        if (techId && techName) {
+          updated[poleId] = {
+            techId,
+            techName,
+            assignedAt: now || new Date().toISOString(),
+          };
+        } else {
+          delete updated[poleId];
+        }
+
+        // Background sync to admin_settings as legacy fallback
+        supabase
           .from("admin_settings")
-          .update({ value: JSON.stringify(updated), updated_at: now })
-          .eq("key", "job_assignments");
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("admin_settings")
-          .insert([{ key: "job_assignments", value: JSON.stringify(updated), updated_at: now }]);
-        if (error) throw error;
-      }
+          .upsert({ key: "job_assignments", value: JSON.stringify(updated), updated_at: new Date().toISOString() })
+          .then();
+
+        return updated;
+      });
     } catch (err) {
       console.error("Failed to assign job:", err);
       throw err;
@@ -147,31 +167,47 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
         .from("poles")
         .select(`
           id, zone, status, days_outage, last_inspected, install_date,
+          assigned_tech_id, assigned_tech_name, assigned_at,
           reports (id, pole_id, fault_type, severity, description, timestamp, reported_by, contact_info)
         `);
 
       if (polesError) throw polesError;
 
-      const mappedPoles: Pole[] = (polesData || []).map((p: any) => ({
-        id: p.id,
-        zone: p.zone,
-        status: p.status,
-        daysOutage: p.days_outage || 0,
-        lastInspected: new Date(p.last_inspected),
-        installDate: new Date(p.install_date),
-        reports: (p.reports || []).map((r: any) => ({
-          id: r.id,
-          poleId: r.pole_id,
-          faultType: r.fault_type,
-          severity: r.severity,
-          description: r.description,
-          photoUrl: r.photo_url,
-          timestamp: new Date(r.timestamp),
-          reportedBy: r.reported_by,
-          contactInfo: r.contact_info,
-        })),
-      }));
+      const initialAssignments: Record<string, JobAssignment> = {};
 
+      const mappedPoles: Pole[] = (polesData || []).map((p: any) => {
+        if (p.assigned_tech_id && p.assigned_tech_name) {
+          initialAssignments[p.id] = {
+            techId: p.assigned_tech_id,
+            techName: p.assigned_tech_name,
+            assignedAt: p.assigned_at,
+          };
+        }
+        return {
+          id: p.id,
+          zone: p.zone,
+          status: p.status,
+          daysOutage: p.days_outage || 0,
+          lastInspected: new Date(p.last_inspected),
+          installDate: new Date(p.install_date),
+          assignedTechId: p.assigned_tech_id || null,
+          assignedTechName: p.assigned_tech_name || null,
+          assignedAt: p.assigned_at ? new Date(p.assigned_at) : null,
+          reports: (p.reports || []).map((r: any) => ({
+            id: r.id,
+            poleId: r.pole_id,
+            faultType: r.fault_type,
+            severity: r.severity,
+            description: r.description,
+            photoUrl: r.photo_url,
+            timestamp: new Date(r.timestamp),
+            reportedBy: r.reported_by,
+            contactInfo: r.contact_info,
+          })),
+        };
+      });
+
+      setAssignments((prev) => ({ ...initialAssignments, ...prev }));
       setPoles(mappedPoles);
     } catch (error) {
       console.error("Error fetching poles:", error);
