@@ -2,12 +2,14 @@ import { Drawer as DrawerPrimitive } from "vaul";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapPin, Clock, AlertTriangle, Calendar, ShieldAlert, FileText, Phone, Camera, X } from "lucide-react";
 import { Pole, usePoles } from "@/context/PoleContext";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import LoadingScreen from "./LoadingScreen";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
 interface PoleDrawerProps {
   pole: Pole | null;
@@ -23,9 +25,18 @@ const severityColor: Record<string, string> = {
 };
 
 const PoleDrawer = ({ pole, open, onClose }: PoleDrawerProps) => {
-  const { markRepaired, fetchReportDetails } = usePoles();
+  const { markRepaired, fetchReportDetails, assignJob, assignments } = usePoles();
   const [fetchingPhoto, setFetchingPhoto] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
+  const [technicians, setTechnicians] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      supabase.from("technicians").select("*").then(({ data }) => {
+        if (data) setTechnicians(data);
+      });
+    }
+  }, [open]);
 
   if (!pole) return null;
 
@@ -102,6 +113,49 @@ const PoleDrawer = ({ pole, open, onClose }: PoleDrawerProps) => {
                   </div>
                 )}
               </div>
+
+              <Separator className="bg-slate-100" />
+
+              {/* Targeted Job Assignment Section */}
+              {pole.status !== "Operational" && (
+                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 space-y-3">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Targeted Job Assignment</p>
+                    <p className="font-bold text-[#1A365D]">Assigned Technician</p>
+                  </div>
+                  <Select
+                    value={pole.assignedTechId || assignments[pole.id]?.techId || "unassigned"}
+                    onValueChange={async (val) => {
+                      if (val === "unassigned") {
+                        await assignJob(pole.id, null, null);
+                        toast.info(`Pole ${pole.id} set to Unassigned`);
+                      } else {
+                        const selectedTech = technicians.find((t) => t.employee_id === val);
+                        if (selectedTech) {
+                          await assignJob(pole.id, selectedTech.employee_id, selectedTech.name);
+                          toast.success(`Assigned ${pole.id} to ${selectedTech.name}!`, {
+                            className: "bg-[#1A365D] text-white border-none shadow-xl"
+                          });
+                        }
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-10 text-xs font-bold w-full bg-background border-slate-200">
+                      <SelectValue placeholder="Assign Technician" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[200]">
+                      <SelectItem value="unassigned" className="text-muted-foreground text-xs font-semibold">
+                        Unassigned
+                      </SelectItem>
+                      {technicians.map((t) => (
+                        <SelectItem key={t.id || t.employee_id} value={t.employee_id} className="text-xs font-bold">
+                          {t.name} ({t.employee_id})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <Separator className="bg-slate-100" />
 

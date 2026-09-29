@@ -607,32 +607,70 @@ const Dashboard = () => {
                 {/* Mobile Cards */}
                 <div className="sm:hidden divide-y">
                   {displayedFilteredPoles.map((pole) => (
-                    <div key={pole.id} className="p-4 space-y-2 active:bg-muted/30" onClick={() => { setSelectedPole(pole); setDrawerOpen(true); }}>
+                    <div
+                      key={pole.id}
+                      className="p-4 space-y-3 bg-card border-b last:border-b-0 hover:bg-muted/20 transition-colors cursor-pointer"
+                      onClick={() => { setSelectedPole(pole); setDrawerOpen(true); }}
+                    >
                       <div className="flex items-center justify-between">
-                        <span className="font-mono font-semibold text-sm text-foreground">{pole.id}</span>
+                        <span className="font-mono font-bold text-base text-foreground">{pole.id}</span>
                         {pole.status === "Operational" ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-success">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-success bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-100">
                             <span className="w-2 h-2 rounded-full bg-success pulse-green" /> Operational
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-destructive bg-red-50 px-2.5 py-0.5 rounded-md border border-red-100">
                             <span className="w-2 h-2 rounded-full bg-destructive glow-red" /> Defective
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3" />{pole.zone}</p>
-                        {pole.reports.length > 0 && <Badge variant="secondary" className="text-xs">{pole.reports.length} report{pole.reports.length !== 1 ? "s" : ""}</Badge>}
+
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <p className="flex items-center gap-1 font-medium"><MapPin className="w-3.5 h-3.5 text-slate-400" />{pole.zone}</p>
+                        {pole.reports.length > 0 && <Badge variant="secondary" className="text-xs font-bold">{pole.reports.length} report{pole.reports.length !== 1 ? "s" : ""}</Badge>}
                       </div>
+
                       {pole.status !== "Operational" && (
-                        <div className="text-xs pt-1">
-                          <span className="text-muted-foreground font-semibold">Assigned: </span>
-                          <span className="font-bold text-[#1A365D]">
-                            {assignments[pole.id]?.techName ? assignments[pole.id]?.techName : "Unassigned"}
+                        <div className="pt-2 border-t border-slate-100 flex flex-col gap-1.5" onClick={(e) => e.stopPropagation()}>
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#1A365D] flex items-center gap-1">
+                            <Wrench className="w-3.5 h-3.5 text-slate-400" />
+                            Assigned Tech:
                           </span>
+                          <Select
+                            value={pole.assignedTechId || assignments[pole.id]?.techId || "unassigned"}
+                            onValueChange={async (val) => {
+                              if (val === "unassigned") {
+                                await assignJob(pole.id, null, null);
+                                toast.info(`Pole ${pole.id} set to Unassigned`);
+                              } else {
+                                const selectedTech = technicians.find((t) => t.employee_id === val);
+                                if (selectedTech) {
+                                  await assignJob(pole.id, selectedTech.employee_id, selectedTech.name);
+                                  toast.success(`Assigned ${pole.id} to ${selectedTech.name}!`, {
+                                    className: "bg-[#1A365D] text-white border-none shadow-xl"
+                                  });
+                                }
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="h-9 text-xs font-bold w-full bg-background border-slate-200 shadow-sm">
+                              <SelectValue placeholder="Assign Tech" />
+                            </SelectTrigger>
+                            <SelectContent className="z-[200]">
+                              <SelectItem value="unassigned" className="text-muted-foreground text-xs font-semibold">
+                                Unassigned
+                              </SelectItem>
+                              {technicians.map((t) => (
+                                <SelectItem key={t.id} value={t.employee_id} className="text-xs font-bold">
+                                  {t.name} ({t.employee_id})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                       )}
-                      {pole.daysOutage > 0 && <p className="text-xs text-destructive font-medium">{pole.daysOutage} day{pole.daysOutage !== 1 ? "s" : ""} outage</p>}
+
+                      {pole.daysOutage > 0 && <p className="text-xs text-destructive font-semibold">{pole.daysOutage} day{pole.daysOutage !== 1 ? "s" : ""} outage</p>}
                     </div>
                   ))}
                   {filtered.length > 12 && (
