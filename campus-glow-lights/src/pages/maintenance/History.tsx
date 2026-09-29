@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import ugLogo from "@/assets/ug-logo.png";
-import { generateReceiptHtml } from "@/lib/receipt-utils";
+import { generateReceiptHtml, openReceiptWindow } from "@/lib/receipt-utils";
 
 const MaintenanceHistory = () => {
     const { repairs, loadingRepairs, fetchRepairDetails, deleteRepair } = usePoles();
@@ -123,36 +123,9 @@ const MaintenanceHistory = () => {
                                                 variant="outline"
                                                 size="sm"
                                                 className="h-8 text-[10px] font-bold uppercase transition-all active:scale-95"
-                                                onClick={async () => {
-                                                    setProcessingReceipt(true);
-                                                    try {
-                                                        const details = await fetchRepairDetails(f.id);
-                                                        if (details) {
-                                                            const win = window.open("", "_blank");
-                                                            const html = generateReceiptHtml({
-                                                                poleId: f.poleId,
-                                                                techName: f.techName,
-                                                                faultCategory: f.faultCategory,
-                                                                timestamp: format(new Date(f.timestamp), "MMM dd, yyyy @ h:mm a"),
-                                                                beforePhoto: details.before,
-                                                                afterPhoto: details.after,
-                                                                workNotes: details.notes,
-                                                                ugLogo: ugLogo
-                                                            });
-                                                            win?.document.write(html);
-                                                            win?.document.close();
-                                                        } else {
-                                                            toast.error("Documentation not found.");
-                                                        }
-                                                    }
-                                                    catch (e) {
-                                                        toast.error("Error generating receipt.");
-                                                    } finally {
-                                                        setProcessingReceipt(false);
-                                                    }
-                                                }}
+                                                onClick={() => openReceiptWindow(f, fetchRepairDetails, ugLogo)}
                                             >
-                                                View
+                                                Receipt
                                             </Button>
                                             <Button
                                                 variant="ghost"
@@ -200,34 +173,7 @@ const MaintenanceHistory = () => {
                                         variant="outline"
                                         size="sm"
                                         className="h-8 text-[10px] font-black uppercase tracking-widest px-4 transition-all active:scale-95"
-                                        onClick={async () => {
-                                            setProcessingReceipt(true);
-                                            try {
-                                                const details = await fetchRepairDetails(f.id);
-                                                if (details) {
-                                                    const win = window.open("", "_blank");
-                                                    const html = generateReceiptHtml({
-                                                        poleId: f.poleId,
-                                                        techName: f.techName,
-                                                        faultCategory: f.faultCategory,
-                                                        timestamp: format(new Date(f.timestamp), "MMM dd, yyyy @ h:mm a"),
-                                                        beforePhoto: details.before,
-                                                        afterPhoto: details.after,
-                                                        workNotes: details.notes,
-                                                        ugLogo: ugLogo
-                                                    });
-                                                    win?.document.write(html);
-                                                    win?.document.close();
-                                                } else {
-                                                    toast.error("Photos missing");
-                                                }
-                                            }
-                                            catch (e) {
-                                                toast.error("Error");
-                                            } finally {
-                                                setProcessingReceipt(false);
-                                            }
-                                        }}
+                                        onClick={() => openReceiptWindow(f, fetchRepairDetails, ugLogo)}
                                     >
                                         Receipt
                                     </Button>

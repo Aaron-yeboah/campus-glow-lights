@@ -107,15 +107,25 @@ const ReportDetailsModal = ({ report, poleId }: { report: any, poleId: string })
 };
 
 const MaintenanceDashboard = () => {
-    const { poles, loading, startRepair } = usePoles();
+    const { poles, loading, startRepair, assignments } = usePoles();
     const [search, setSearch] = useState("");
     const [selectedReportPole, setSelectedReportPole] = useState<Pole | null>(null);
     const [startingPoleId, setStartingPoleId] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const currentTechId = sessionStorage.getItem("tech_id") || "";
+    const currentTechName = sessionStorage.getItem("tech_name") || "";
+
     const defectivePoles = useMemo(() => {
         return poles
             .filter((p) => p.status === "Defective" || p.status === "In Progress")
+            .filter((p) => {
+                const assignment = assignments[p.id];
+                if (!assignment) return false;
+                const matchesId = currentTechId && assignment.techId === currentTechId;
+                const matchesName = currentTechName && assignment.techName.trim().toLowerCase() === currentTechName.trim().toLowerCase();
+                return Boolean(matchesId || matchesName);
+            })
             .filter((p) =>
                 p.id.toLowerCase().includes(search.toLowerCase()) ||
                 p.zone.toLowerCase().includes(search.toLowerCase())
@@ -128,7 +138,7 @@ const MaintenanceDashboard = () => {
                 // Priority 2: Days Outage (highest first)
                 return b.daysOutage - a.daysOutage;
             });
-    }, [poles, search]);
+    }, [poles, search, assignments, currentTechId, currentTechName]);
 
     const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -310,11 +320,14 @@ const MaintenanceDashboard = () => {
                 {defectivePoles.length === 0 && !loading && (
                     <div className="col-span-full py-20 text-center space-y-4 bg-white border border-dashed border-slate-200 rounded-2xl">
                         <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto">
-                            <CheckCircle className="w-8 h-8 text-slate-300" />
+                            <CheckCircle className="w-8 h-8 text-emerald-500" />
                         </div>
                         <div>
-                            <h3 className="text-lg font-bold text-[#1A365D]">Zero Active Faults</h3>
-                            <p className="text-sm text-slate-500">All streetlights in your assigned zones are currently operational.</p>
+                            <h3 className="text-lg font-bold text-[#1A365D]">No Pending Jobs Assigned</h3>
+                            <p className="text-sm text-slate-500 max-w-md mx-auto">
+                                {currentTechName ? `Hello ${currentTechName}, you currently have no assigned maintenance tasks.` : "You currently have no assigned maintenance tasks."}
+                                {" "}When the administrator assigns defective streetlights to your account, they will appear here automatically.
+                            </p>
                         </div>
                     </div>
                 )}

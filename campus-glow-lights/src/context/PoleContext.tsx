@@ -36,9 +36,18 @@ export interface Repair {
   timestamp: Date;
 }
 
+export interface JobAssignment {
+  techId: string;
+  techName: string;
+  assignedAt?: string;
+}
+
 interface PoleContextType {
   poles: Pole[];
   repairs: Repair[];
+  assignments: Record<string, JobAssignment>;
+  assignJob: (poleId: string, techId: string | null, techName: string | null) => Promise<void>;
+  getAssignment: (poleId: string) => JobAssignment | undefined;
   submitReport: (poleId: string, faultType: string, severity: string, description: string, photoUrl: string, contactInfo: string) => Promise<void>;
   startRepair: (poleId: string, beforePhoto: string) => Promise<void>;
   markRepaired: (poleId: string) => Promise<void>;
@@ -63,6 +72,74 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
   const [repairs, setRepairs] = useState<Repair[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingRepairs, setLoadingRepairs] = useState(true);
+
+  const [assignments, setAssignments] = useState<Record<string, JobAssignment>>({});
+
+  const fetchAssignments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("admin_settings")
+        .select("value")
+        .eq("key", "job_assignments")
+        .maybeSingle();
+
+      if (error) throw error;
+      if (data?.value) {
+        try {
+          const parsed = JSON.parse(data.value);
+          setAssignments(parsed || {});
+        } catch (e) {
+          console.error("Failed to parse job_assignments JSON:", e);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching job assignments:", err);
+    }
+  };
+
+  const assignJob = async (poleId: string, techId: string | null, techName: string | null) => {
+    try {
+      const updated = { ...assignments };
+      if (techId && techName) {
+        updated[poleId] = {
+          techId,
+          techName,
+          assignedAt: new Date().toISOString(),
+        };
+      } else {
+        delete updated[poleId];
+      }
+
+      setAssignments(updated);
+
+      const now = new Date().toISOString();
+      const { data: existing } = await supabase
+        .from("admin_settings")
+        .select("id")
+        .eq("key", "job_assignments")
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from("admin_settings")
+          .update({ value: JSON.stringify(updated), updated_at: now })
+          .eq("key", "job_assignments");
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("admin_settings")
+          .insert([{ key: "job_assignments", value: JSON.stringify(updated), updated_at: now }]);
+        if (error) throw error;
+      }
+    } catch (err) {
+      console.error("Failed to assign job:", err);
+      throw err;
+    }
+  };
+
+  const getAssignment = (poleId: string) => {
+    return assignments[poleId];
+  };
 
   const fetchPoles = async () => {
     try {
@@ -145,6 +222,7 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     fetchPoles();
     fetchRepairs();
+    fetchAssignments();
 
     const channel = supabase
       .channel("db-changes")
@@ -162,6 +240,11 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
         "postgres_changes",
         { event: "*", schema: "public", table: "repairs" },
         () => fetchRepairs()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "admin_settings" },
+        () => fetchAssignments()
       )
       .subscribe();
 
@@ -363,6 +446,9 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
     <PoleContext.Provider value={{
       poles,
       repairs,
+      assignments,
+      assignJob,
+      getAssignment,
       submitReport,
       startRepair,
       markRepaired,
