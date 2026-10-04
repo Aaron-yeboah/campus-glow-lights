@@ -41,3 +41,10 @@ dist-ssr
 # Scratch/generation scripts
 doc_scratch/
 ppt_scratch/
+
+# Debug output dumps
+git-output.txt
+*.output.txt
+
+# Nested/stale project copies
+campus-glow-lights/

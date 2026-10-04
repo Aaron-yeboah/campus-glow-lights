@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import Lottie from "lottie-react";
 import splashAnimation from "@/assets/splashscreen.json";
 
@@ -8,8 +9,12 @@ interface LoadingScreenProps {
 }
 
 const LoadingScreen = ({ message = "Syncing with Supabase...", fullScreen = false, translucent = false }: LoadingScreenProps) => {
-    const backgroundClass = translucent ? "fixed inset-0 bg-background/60 backdrop-blur-md z-[100]" : (fullScreen ? "fixed inset-0 bg-background z-50" : "py-20");
-    return (
+    const isOverlay = fullScreen || translucent;
+    const backgroundClass = translucent
+        ? "fixed inset-0 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md z-[9999]"
+        : (fullScreen ? "fixed inset-0 bg-background z-[9999]" : "py-20");
+
+    const content = (
         <div className={`flex flex-col items-center justify-center ${backgroundClass}`}>
             <div className="w-48 h-48 sm:w-64 sm:h-64">
                 <Lottie
@@ -19,12 +24,22 @@ const LoadingScreen = ({ message = "Syncing with Supabase...", fullScreen = fals
                 />
             </div>
             {message && (
-                <p className="text-muted-foreground font-medium animate-pulse mt-4 text-sm sm:text-base">
+                <p className={`font-bold animate-pulse mt-4 text-sm sm:text-base ${
+                    translucent
+                        ? "text-[#1A365D] dark:text-amber-400"
+                        : "text-muted-foreground"
+                }`}>
                     {message}
                 </p>
             )}
         </div>
     );
+
+    if (isOverlay && typeof document !== "undefined") {
+        return createPortal(content, document.body);
+    }
+
+    return content;
 };
 
 export default LoadingScreen;
