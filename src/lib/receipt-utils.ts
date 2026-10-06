@@ -1,4 +1,7 @@
 
+import { format } from "date-fns";
+import { toast } from "sonner";
+
 export const generateReceiptHtml = (data: {
     poleId: string;
     techName: string;
@@ -300,11 +303,11 @@ export const generateReceiptHtml = (data: {
             <p class="section-title">Photo Documentation</p>
             <div class="photos">
                 <div class="photo-box">
-                    <img src="${data.beforePhoto}" alt="Before Repair" />
+                    ${data.beforePhoto ? `<img src="${data.beforePhoto}" alt="Before Repair" />` : `<div style="height:180px; display:flex; align-items:center; justify-content:center; background:#f8fafc; color:#94a3b8; font-size:12px; font-weight:bold;">No Before Photo Available</div>`}
                     <div class="photo-label">Initial Assessment (Before)</div>
                 </div>
                 <div class="photo-box">
-                    <img src="${data.afterPhoto}" alt="After Repair" />
+                    ${data.afterPhoto ? `<img src="${data.afterPhoto}" alt="After Repair" />` : `<div style="height:180px; display:flex; align-items:center; justify-content:center; background:#f8fafc; color:#94a3b8; font-size:12px; font-weight:bold;">No After Photo Available</div>`}
                     <div class="photo-label">Completion Status (After)</div>
                 </div>
             </div>
@@ -325,4 +328,80 @@ export const generateReceiptHtml = (data: {
     </body>
     </html>
   `;
+};
+
+/**
+ * Converts any image URL (including Vite asset paths) to a base64 data URL.
+ * Required so images render correctly inside a Blob URL iframe (different origin).
+ */
+const toBase64DataUrl = async (url: string): Promise<string> => {
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    } catch {
+        return url; // fallback to original if fetch fails
+    }
+};
+
+/**
+ * Fetches all data needed for a receipt and returns the fully-rendered HTML string.
+ * Works in both desktop browsers and mobile PWA (no popup required).
+ * Logo is inlined as base64 so it renders inside a Blob URL iframe.
+ */
+export const fetchReceiptHtml = async (
+    repair: { id: string; poleId: string; techName: string; faultCategory: string; timestamp: Date | string },
+    fetchRepairDetailsFn: (id: string) => Promise<{ before: string; after: string; notes: string } | null>,
+    ugLogo: string
+): Promise<string> => {
+    // Resolve logo and report details in parallel
+    const [logoBase64, details] = await Promise.all([
+        toBase64DataUrl(ugLogo),
+        fetchRepairDetailsFn(repair.id),
+    ]);
+
+    const timestampFormatted = repair.timestamp instanceof Date
+        ? format(repair.timestamp, "MMM dd, yyyy @ h:mm a")
+        : format(new Date(repair.timestamp), "MMM dd, yyyy @ h:mm a");
+
+    return generateReceiptHtml({
+        poleId: repair.poleId,
+        techName: repair.techName,
+        faultCategory: repair.faultCategory,
+        timestamp: timestampFormatted,
+        beforePhoto: details?.before || "",
+        afterPhoto: details?.after || "",
+        workNotes: details?.notes || "",
+        ugLogo: logoBase64,
+    });
+};
+
+/**
+ * Desktop-only fallback: opens a popup window with the receipt.
+ * Prefer fetchReceiptHtml + in-app viewer for PWA compatibility.
+ */
+export const openReceiptWindow = async (
+    repair: { id: string; poleId: string; techName: string; faultCategory: string; timestamp: Date | string },
+    fetchRepairDetailsFn: (id: string) => Promise<{ before: string; after: string; notes: string } | null>,
+    ugLogo: string
+) => {
+    try {
+        const html = await fetchReceiptHtml(repair, fetchRepairDetailsFn, ugLogo);
+        const blob = new Blob([html], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        const win = window.open(url, "_blank");
+        if (!win) {
+            toast.error("Popup blocked — please allow popups for this site.");
+        }
+        // Revoke after a short delay to allow the window to load the blob
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (err) {
+        console.error("Receipt generation error:", err);
+        toast.error("Failed to load receipt details.");
+    }
 };

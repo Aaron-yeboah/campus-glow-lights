@@ -107,15 +107,29 @@ const ReportDetailsModal = ({ report, poleId }: { report: any, poleId: string })
 };
 
 const MaintenanceDashboard = () => {
-    const { poles, loading, startRepair } = usePoles();
+    const { poles, loading, startRepair, assignments } = usePoles();
     const [search, setSearch] = useState("");
     const [selectedReportPole, setSelectedReportPole] = useState<Pole | null>(null);
     const [startingPoleId, setStartingPoleId] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const currentTechId = sessionStorage.getItem("tech_id") || "";
+    const currentTechName = sessionStorage.getItem("tech_name") || "";
+
     const defectivePoles = useMemo(() => {
         return poles
             .filter((p) => p.status === "Defective" || p.status === "In Progress")
+            .filter((p) => {
+                const assignment = assignments[p.id];
+                const techId = p.assignedTechId || assignment?.techId;
+                const techName = p.assignedTechName || assignment?.techName;
+
+                if (!techId && !techName) return false;
+
+                const matchesId = currentTechId && techId === currentTechId;
+                const matchesName = currentTechName && techName && techName.trim().toLowerCase() === currentTechName.trim().toLowerCase();
+                return Boolean(matchesId || matchesName);
+            })
             .filter((p) =>
                 p.id.toLowerCase().includes(search.toLowerCase()) ||
                 p.zone.toLowerCase().includes(search.toLowerCase())
@@ -128,7 +142,7 @@ const MaintenanceDashboard = () => {
                 // Priority 2: Days Outage (highest first)
                 return b.daysOutage - a.daysOutage;
             });
-    }, [poles, search]);
+    }, [poles, search, assignments, currentTechId, currentTechName]);
 
     const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -253,15 +267,20 @@ const MaintenanceDashboard = () => {
                                             {pole.zone}
                                         </div>
                                     </div>
-                                    {status === "Defective" ? (
-                                        <Badge className="bg-red-50 text-red-600 border border-red-100 hover:bg-red-50 text-[10px] font-black uppercase tracking-tighter px-2">
-                                            Defective
+                                    <div className="flex flex-col items-end gap-1">
+                                        <Badge variant="outline" className="bg-blue-50 text-[#1A365D] border-blue-200 text-[10px] font-bold">
+                                            Assigned to You
                                         </Badge>
-                                    ) : (
-                                        <Badge className="bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-50 text-[10px] font-black uppercase tracking-tighter px-2">
-                                            In Progress
-                                        </Badge>
-                                    )}
+                                        {status === "Defective" ? (
+                                            <Badge className="bg-red-50 text-red-600 border border-red-100 hover:bg-red-50 text-[10px] font-black uppercase tracking-tighter px-2">
+                                                Defective
+                                            </Badge>
+                                        ) : (
+                                            <Badge className="bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-50 text-[10px] font-black uppercase tracking-tighter px-2">
+                                                In Progress
+                                            </Badge>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="space-y-2">
@@ -310,11 +329,13 @@ const MaintenanceDashboard = () => {
                 {defectivePoles.length === 0 && !loading && (
                     <div className="col-span-full py-20 text-center space-y-4 bg-white border border-dashed border-slate-200 rounded-2xl">
                         <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto">
-                            <CheckCircle className="w-8 h-8 text-slate-300" />
+                            <CheckCircle className="w-8 h-8 text-emerald-500" />
                         </div>
                         <div>
-                            <h3 className="text-lg font-bold text-[#1A365D]">Zero Active Faults</h3>
-                            <p className="text-sm text-slate-500">All streetlights in your assigned zones are currently operational.</p>
+                            <h3 className="text-lg font-bold text-[#1A365D]">No Assigned Outages</h3>
+                            <p className="text-sm text-slate-500 max-w-md mx-auto">
+                                {currentTechName ? `Hello ${currentTechName}, you have no pending maintenance jobs assigned by the administrator at this time. Check back later.` : "You have no pending maintenance jobs assigned by the administrator at this time. Check back later."}
+                            </p>
                         </div>
                     </div>
                 )}
