@@ -155,10 +155,17 @@ const MaintenanceDashboard = () => {
                     const compressed = await compressImage(base64Photo);
                     await startRepair(startingPoleId, compressed);
                     toast.dismiss(compToast);
-                    toast.success(`Work started on ${startingPoleId}`, {
-                        description: "Status updated to 'In Progress' with Optimized Photo.",
-                        className: "bg-[#1A365D] text-white border-none shadow-xl"
-                    });
+                    if (!navigator.onLine) {
+                        toast.info(`Work started on ${startingPoleId} (Offline)`, {
+                            description: "Status saved locally. Will sync when back online.",
+                            className: "bg-amber-600 text-white border-none shadow-xl"
+                        });
+                    } else {
+                        toast.success(`Work started on ${startingPoleId}`, {
+                            description: "Status updated to 'In Progress' with Optimized Photo.",
+                            className: "bg-[#1A365D] text-white border-none shadow-xl"
+                        });
+                    }
                 } catch (error) {
                     toast.error("Failed to process photo.");
                 } finally {
