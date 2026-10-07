@@ -165,10 +165,17 @@ const RepairForm = () => {
                 afterPhotoUrl: afterPhoto
             });
 
-            toast.success(`Success! ${poleId} is now back online.`, {
-                description: "Repair record has been synchronized with the database.",
-                className: "bg-success text-white border-none shadow-xl"
-            });
+            if (!navigator.onLine) {
+                toast.info(`Repair saved locally! Pole ${poleId} marked operational offline.`, {
+                    description: "Work order will sync automatically when you reconnect to Wi-Fi/data.",
+                    className: "bg-amber-600 text-white border-none shadow-xl"
+                });
+            } else {
+                toast.success(`Success! ${poleId} is now back online.`, {
+                    description: "Repair record has been synchronized with the database.",
+                    className: "bg-success text-white border-none shadow-xl"
+                });
+            }
 
             navigate("/maintenance/history");
         } catch (error: any) {

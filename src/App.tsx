@@ -1,9 +1,12 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PoleProvider } from "@/context/PoleContext";
+import OfflineIndicator from "@/components/OfflineIndicator";
+import { initOfflineSync } from "@/lib/offline-sync";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Report from "./pages/Report";
@@ -22,10 +25,16 @@ import MaintenanceHistory from "./pages/maintenance/History";
 const queryClient = new QueryClient();
 
 const App = () => {
+  useEffect(() => {
+    const cleanup = initOfflineSync();
+    return () => cleanup();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <PoleProvider>
+          <OfflineIndicator />
           <Toaster />
           <Sonner />
           <BrowserRouter>

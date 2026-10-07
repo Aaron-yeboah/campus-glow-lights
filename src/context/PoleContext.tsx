@@ -1,5 +1,13 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import {
+  savePolesToCache,
+  getCachedPoles,
+  saveRepairsToCache,
+  getCachedRepairs,
+  queueOfflineReport,
+  queueOfflineRepair
+} from "@/lib/offline-db";
 
 export interface FaultReport {
   id: string;
@@ -163,6 +171,16 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchPoles = async () => {
     try {
+      // --- Offline fallback: load from IndexedDB if no network ---
+      if (!navigator.onLine) {
+        const cached = await getCachedPoles();
+        if (cached.length > 0) {
+          setPoles(cached);
+        }
+        setLoading(false);
+        return;
+      }
+
       const { data: polesData, error: polesError } = await supabase
         .from("poles")
         .select(`
@@ -209,8 +227,16 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
 
       setAssignments((prev) => ({ ...initialAssignments, ...prev }));
       setPoles(mappedPoles);
+
+      // --- Persist fresh data to IndexedDB for offline reads ---
+      savePolesToCache(mappedPoles);
     } catch (error) {
       console.error("Error fetching poles:", error);
+      // Network error: fall back to IndexedDB cache
+      const cached = await getCachedPoles();
+      if (cached.length > 0) {
+        setPoles(cached);
+      }
     } finally {
       setLoading(false);
     }
@@ -218,6 +244,14 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchRepairs = async () => {
     try {
+      // --- Offline fallback ---
+      if (!navigator.onLine) {
+        const cached = await getCachedRepairs();
+        if (cached.length > 0) setRepairs(cached);
+        setLoadingRepairs(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("repairs")
         .select("id, pole_id, tech_name, fault_category, status, timestamp")
@@ -236,8 +270,13 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
       }));
 
       setRepairs(mappedRepairs);
+
+      // --- Persist to IndexedDB ---
+      saveRepairsToCache(mappedRepairs);
     } catch (error) {
       console.error("Error fetching repairs:", error);
+      const cached = await getCachedRepairs();
+      if (cached.length > 0) setRepairs(cached);
     } finally {
       setLoadingRepairs(false);
     }
@@ -297,6 +336,18 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
     photoUrl: string,
     contactInfo: string
   ) => {
+    // --- OFFLINE: Queue to IndexedDB outbox ---
+    if (!navigator.onLine) {
+      await queueOfflineReport({ poleId, faultType, severity, description, photoUrl, contactInfo });
+      // Optimistically update local state so UI reflects pending status
+      setPoles((prev) =>
+        prev.map((p) =>
+          p.id === poleId ? { ...p, status: "Defective" } : p
+        )
+      );
+      return;
+    }
+
     try {
       const { error: reportError } = await supabase.from("reports").insert([
         {
@@ -319,12 +370,29 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
 
       if (poleError) throw poleError;
     } catch (error: any) {
+      // Network failure mid-attempt: fall back to offline queue
+      if (!navigator.onLine || error?.message?.toLowerCase().includes("network") || error?.message?.toLowerCase().includes("fetch")) {
+        await queueOfflineReport({ poleId, faultType, severity, description, photoUrl, contactInfo });
+        setPoles((prev) =>
+          prev.map((p) => (p.id === poleId ? { ...p, status: "Defective" } : p))
+        );
+        return;
+      }
       console.error("Supabase Submit Report Error:", error.message || error);
       throw error;
     }
   };
 
   const startRepair = async (poleId: string, beforePhoto: string) => {
+    // --- OFFLINE: Queue action ---
+    if (!navigator.onLine) {
+      await queueOfflineRepair({ action: "startRepair", poleId, payload: { beforePhoto } });
+      setPoles((prev) =>
+        prev.map((p) => (p.id === poleId ? { ...p, status: "In Progress" } : p))
+      );
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from("poles")
@@ -335,7 +403,14 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
         .eq("id", poleId);
 
       if (error) throw error;
-    } catch (error) {
+    } catch (error: any) {
+      if (!navigator.onLine || error?.message?.toLowerCase().includes("network")) {
+        await queueOfflineRepair({ action: "startRepair", poleId, payload: { beforePhoto } });
+        setPoles((prev) =>
+          prev.map((p) => (p.id === poleId ? { ...p, status: "In Progress" } : p))
+        );
+        return;
+      }
       console.error("Error starting repair:", error);
       throw error;
     }
@@ -361,6 +436,15 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const submitRepair = async (repair: Partial<Repair>) => {
+    // --- OFFLINE: Queue full repair submission ---
+    if (!navigator.onLine) {
+      await queueOfflineRepair({ action: "submitRepair", poleId: repair.poleId!, payload: repair });
+      setPoles((prev) =>
+        prev.map((p) => (p.id === repair.poleId ? { ...p, status: "Operational", daysOutage: 0 } : p))
+      );
+      return;
+    }
+
     try {
       const { error } = await supabase.from("repairs").insert([
         {
@@ -381,6 +465,13 @@ export const PoleProvider = ({ children }: { children: ReactNode }) => {
         await markRepaired(repair.poleId);
       }
     } catch (error: any) {
+      if (!navigator.onLine || error?.message?.toLowerCase().includes("network")) {
+        await queueOfflineRepair({ action: "submitRepair", poleId: repair.poleId!, payload: repair });
+        setPoles((prev) =>
+          prev.map((p) => (p.id === repair.poleId ? { ...p, status: "Operational", daysOutage: 0 } : p))
+        );
+        return;
+      }
       console.error("Supabase Submit Repair Error:", error.message || error);
       throw error;
     }

@@ -11,7 +11,7 @@ interface LoadingScreenProps {
 const LoadingScreen = ({ message = "Syncing with Supabase...", fullScreen = false, translucent = false }: LoadingScreenProps) => {
     const isOverlay = fullScreen || translucent;
     const backgroundClass = translucent
-        ? "fixed inset-0 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md z-[9999]"
+        ? "fixed inset-0 bg-white/85 backdrop-blur-md z-[9999]"
         : (fullScreen ? "fixed inset-0 bg-background z-[9999]" : "py-20");
 
     const content = (
@@ -26,7 +26,7 @@ const LoadingScreen = ({ message = "Syncing with Supabase...", fullScreen = fals
             {message && (
                 <p className={`font-bold animate-pulse mt-4 text-sm sm:text-base ${
                     translucent
-                        ? "text-[#1A365D] dark:text-amber-400"
+                        ? "text-[#1A365D]"
                         : "text-muted-foreground"
                 }`}>
                     {message}

@@ -51,6 +51,7 @@ const Report = () => {
   const [description, setDescription] = useState("");
   const [contactInfo, setContactInfo] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [submittedOffline, setSubmittedOffline] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -86,8 +87,13 @@ const Report = () => {
     try {
       setSubmitting(true);
       await submitReport(poleId, faultType, severity, description, photo, contactInfo);
-      setSubmitted(true);
-      toast.success("Report submitted successfully!");
+      if (!navigator.onLine) {
+        setSubmittedOffline(true);
+        toast.info("Report saved offline. It will sync when you reconnect.");
+      } else {
+        setSubmitted(true);
+        toast.success("Report submitted successfully!");
+      }
     } catch (error: any) {
       console.error("Report Submission Error:", error);
       toast.error(`Submission failed: ${error.message || "Please try again"}`);
@@ -98,6 +104,32 @@ const Report = () => {
 
   if (submitting) {
     return <LoadingScreen message="Syncing with Supabase..." fullScreen />;
+  }
+
+  if (submittedOffline) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center space-y-6 max-w-sm">
+          <div className="mx-auto w-20 h-20 rounded-full bg-amber-100 flex items-center justify-center">
+            <span className="text-3xl">📶</span>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-display font-bold text-foreground">Saved Offline</h2>
+            <p className="text-muted-foreground text-sm">
+              Your report for pole <span className="font-mono font-bold text-foreground">{poleId}</span> has been saved to your device and will automatically upload when your internet connection is restored.
+            </p>
+          </div>
+          <div className="rounded-xl border bg-amber-50 border-amber-200 p-4 text-left space-y-1">
+            <p className="text-[10px] text-amber-600 uppercase font-bold tracking-tighter">Queued Report</p>
+            <p className="text-sm font-semibold text-foreground">{faultType}</p>
+            <p className="text-xs text-muted-foreground">Severity: {severity}</p>
+          </div>
+          <Button variant="outline" className="w-full" onClick={() => { setSubmittedOffline(false); setPhoto(null); setFaultType(""); setSeverity(""); setDescription(""); setContactInfo(""); }}>
+            Submit Another Report
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   if (submitted) {
